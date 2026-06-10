@@ -15,8 +15,7 @@ import {
   PRECIO_PRO_ANUAL,
   TODOS_LOS_PLANES,
 } from "../plans";
-
-const BILLING_TEST = true;
+import { BILLING_TEST } from "../billing.server";
 
 // Formatea un monto en la moneda BASE de la tienda (shopMoney) con separadores
 // de miles y el símbolo correcto. Shopify ya convirtió a la moneda del comerciante.

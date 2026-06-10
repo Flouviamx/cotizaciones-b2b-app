@@ -180,7 +180,60 @@ export async function notifyRequesterQuoteSent(
   return enviar({ to: [opts.requesterEmail], subject, html });
 }
 
-// ---------- 4) Mensaje del comerciante hacia soporte de Flouvia ----------
+// ---------- 4) Aviso al VENDEDOR: cuota de CFDI (80% / 100%) ----------
+// Correo operativo (NO editable): avisa que se acerca o agotó la cuota mensual
+// de facturas incluidas, para que el excedente no lo tome por sorpresa.
+
+type CuotaCfdiOpts = {
+  merchantEmail: string;
+  shopName?: string;
+  plan: "pro" | "plus";
+  nivel: 80 | 100;
+  timbrados: number;
+  limite: number;
+  extra: number; // USD por factura adicional
+};
+
+export async function notifyMerchantCfdiQuota(
+  opts: CuotaCfdiOpts,
+): Promise<void> {
+  if (!opts.merchantEmail || !opts.merchantEmail.includes("@")) return;
+
+  const planLabel = opts.plan === "plus" ? "Plus" : "Pro";
+  const tienda = opts.shopName ? ` · ${opts.shopName}` : "";
+
+  const subject =
+    opts.nivel === 100
+      ? `⚠️ Agotaste tus ${opts.limite} facturas CFDI del mes${tienda}`
+      : `📊 Vas al ${opts.nivel}% de tu cuota de facturas CFDI${tienda}`;
+
+  const intro =
+    opts.nivel === 100
+      ? `Llegaste a las <strong>${opts.limite}</strong> facturas CFDI incluidas en tu Plan ${planLabel} este mes. A partir de ahora, cada factura adicional se cobra como excedente a <strong>$${opts.extra.toFixed(2)} USD</strong> y aparecerá en tu próximo cobro de Shopify.`
+      : `Ya usaste <strong>${opts.timbrados}</strong> de las <strong>${opts.limite}</strong> facturas CFDI incluidas en tu Plan ${planLabel} este mes (${opts.nivel}%). Al pasar la cuota, cada factura extra cuesta <strong>$${opts.extra.toFixed(2)} USD</strong>.`;
+
+  const tip =
+    opts.plan === "pro"
+      ? `<p style="color:#6b7280;font-size:14px;">¿Facturas mucho? El <strong>Plan Plus</strong> incluye 1000 facturas/mes y abarata el excedente a $0.10 USD. Puedes cambiar de plan desde la sección Planes.</p>`
+      : "";
+
+  const html = `
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;max-width:520px;margin:0 auto;color:#1a1a2e;">
+      <div style="background:linear-gradient(135deg,#1a73e8,#4285f4);color:#fff;padding:20px 24px;border-radius:14px 14px 0 0;">
+        <h2 style="margin:0;font-size:18px;">Facturación CFDI · Plan ${planLabel}</h2>
+      </div>
+      <div style="border:1px solid #ececf0;border-top:0;border-radius:0 0 14px 14px;padding:22px 24px;">
+        <p style="font-size:15px;line-height:1.55;">${intro}</p>
+        <p style="font-size:14px;color:#374151;">La cuota se reinicia automáticamente el día 1 del próximo mes.</p>
+        ${tip}
+      </div>
+    </div>
+  `;
+
+  await enviar({ to: [opts.merchantEmail], subject, html });
+}
+
+// ---------- 5) Mensaje del comerciante hacia soporte de Flouvia ----------
 // (Este NO es editable; es un correo interno de la app.)
 
 type ContactoOpts = {

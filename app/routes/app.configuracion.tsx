@@ -31,6 +31,12 @@ import {
   DEFAULT_FORMULARIO,
   type FormularioConfig,
 } from "../formulario-config";
+import {
+  estadoEmisor,
+  conectarEmisor,
+  setLivemode,
+  type OrgEstado,
+} from "../facturapi.server";
 
 // La configuración se guarda como UN metafield JSON propio de la app
 // (namespace reservado "$app:flouvia"). Los metafields de la app no requieren
@@ -104,7 +110,7 @@ function mergeConfig(raw: any): Config {
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
   const resp = await admin.graphql(
     `#graphql
       query cargarConfig {
@@ -136,18 +142,67 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // valor corrupto: usamos defaults
   }
 
+  // Estado del emisor CFDI (organización Facturapi de esta tienda).
+  const emisor = await estadoEmisor(session.shop);
+
   return {
     config: mergeConfig(guardado),
     shopName: shop.name ?? "",
     shopEmail: shop.email ?? "",
     hasPro,
     hasPaid,
+    emisor,
   };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
   const formData = await request.formData();
+  const intent = String(formData.get("intent") ?? "");
+
+  // ── CFDI: conectar el emisor (crear org + datos fiscales + subir CSD) ──
+  if (intent === "cfdiConnect") {
+    const cer = formData.get("cer");
+    const key = formData.get("key");
+    if (
+      !(cer instanceof File) ||
+      !(key instanceof File) ||
+      cer.size === 0 ||
+      key.size === 0
+    ) {
+      return { cfdiError: "Sube ambos archivos: el certificado (.cer) y la llave (.key)." };
+    }
+    const password = String(formData.get("password") ?? "");
+    if (!password) {
+      return { cfdiError: "Falta la contraseña de la llave privada (.key)." };
+    }
+    const legalName = String(formData.get("legalName") ?? "").trim();
+    const taxSystem = String(formData.get("taxSystem") ?? "").trim();
+    const zip = String(formData.get("zip") ?? "").trim();
+    if (!legalName || !taxSystem || !zip) {
+      return {
+        cfdiError:
+          "Captura primero tu razón social, régimen fiscal y código postal arriba.",
+      };
+    }
+    const r = await conectarEmisor(session.shop, {
+      legalName,
+      taxSystem,
+      zip,
+      cer: new Uint8Array(await cer.arrayBuffer()),
+      key: new Uint8Array(await key.arrayBuffer()),
+      password,
+    });
+    if (!r.ok) return { cfdiError: r.error };
+    return { cfdiOk: true, rfc: r.rfc };
+  }
+
+  // ── CFDI: alternar modo pruebas / producción ──
+  if (intent === "cfdiLivemode") {
+    const livemode = String(formData.get("livemode") ?? "") === "true";
+    await setLivemode(session.shop, livemode);
+    return { cfdiOk: true, livemode };
+  }
 
   let entrante: any;
   try {
@@ -260,6 +315,19 @@ const CSS = `
 .cf-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 21px; height: 21px;
   border-radius: 999px; background: #fff; transition: transform .18s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
 .cf-switch.on::after { transform: translateX(19px); }
+
+/* ---- Conexión CFDI ---- */
+.cf-btn { display:inline-block; border:0; border-radius:11px; padding:11px 18px; font-size:14px;
+  font-weight:700; cursor:pointer; text-decoration:none; text-align:center; }
+.cf-btn.primary { background:linear-gradient(135deg,#1a73e8,#4285f4); color:#fff; }
+.cf-btn.primary:disabled { opacity:.6; cursor:default; }
+.cf-btn.secondary { background:#eef2f7; color:#1a1a2e; }
+.cf-cfdi-ok { background:#dcfce7; color:#15803d; border-radius:12px; padding:13px 15px;
+  font-size:14px; font-weight:600; margin-bottom:16px; }
+.cf-warn { background:#fef3c7; color:#92400e; border-radius:11px; padding:11px 14px;
+  font-size:13px; font-weight:600; margin-bottom:14px; line-height:1.5; }
+.cf-lock { background:linear-gradient(135deg,#f5f9ff,#eef5ff); border-color:#cfe0fc; }
+.cf-input[type=file] { padding:8px 10px; cursor:pointer; }
 
 /* Chips (términos de crédito) */
 .cf-chips { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 4px; }
@@ -384,9 +452,12 @@ function rfcEstado(rfc: string): "vacio" | "ok" | "mal" {
 }
 
 export default function Configuracion() {
-  const { config: inicial, shopEmail, shopName, hasPaid } = useLoaderData<typeof loader>();
+  const { config: inicial, shopEmail, shopName, hasPaid, hasPro, emisor } =
+    useLoaderData<typeof loader>();
   const shopify = useAppBridge();
   const fetcher = useFetcher<typeof action>();
+  const cfdiFetcher = useFetcher<typeof action>();
+  const [mostrarCsd, setMostrarCsd] = useState(false);
 
   const [tab, setTab] = useState<TabId>("fiscal");
   const [mailSel, setMailSel] = useState<EmailKey>("clienteRecibido");
@@ -413,6 +484,23 @@ export default function Configuracion() {
       shopify.toast.show(fetcher.data.error, { isError: true });
     }
   }, [fetcher.data, shopify]);
+
+  // Respuestas del flujo CFDI (conectar emisor / cambiar modo).
+  useEffect(() => {
+    const d = cfdiFetcher.data;
+    if (d?.cfdiOk) {
+      if (d.rfc) {
+        shopify.toast.show(`Emisor conectado · RFC ${d.rfc} ✅`);
+        setMostrarCsd(false);
+      } else {
+        shopify.toast.show("Listo ✅");
+      }
+    } else if (d?.cfdiError) {
+      shopify.toast.show(d.cfdiError, { isError: true });
+    }
+  }, [cfdiFetcher.data, shopify]);
+
+  const conectandoCfdi = cfdiFetcher.state !== "idle";
 
   // Helpers para actualizar una sección sin pisar el resto.
   const set = <K extends keyof Config>(seccion: K, parche: Partial<Config[K]>) =>
@@ -640,11 +728,12 @@ export default function Configuracion() {
 
         {/* ---------- FISCAL ---------- */}
         {tab === "fiscal" ? (
+          <>
           <div className="cf-card">
             <h2>🧾 Datos fiscales del emisor</h2>
             <p className="sub">
-              Se usan para timbrar tus facturas CFDI 4.0 con Facturama al cerrar
-              una cotización. Captúralos tal como están dados de alta en el SAT.
+              Se usan para timbrar tus facturas CFDI 4.0 al cerrar una cotización.
+              Captúralos tal como están dados de alta en el SAT.
             </p>
             <div className="cf-grid">
               <div className="cf-field">
@@ -714,6 +803,160 @@ export default function Configuracion() {
               </div>
             </div>
           </div>
+
+          {/* ---------- Conexión CFDI (Facturapi) ---------- */}
+          {!hasPro ? (
+            <div className="cf-card cf-lock">
+              <h2>📄 Facturación CFDI · Plan Pro</h2>
+              <p className="sub">
+                Conecta tu certificado del SAT (CSD) y timbra facturas CFDI 4.0
+                automáticamente al cerrar una cotización. Disponible desde el Plan Pro.
+              </p>
+              <a className="cf-btn primary" href="/app/plans">
+                Ver planes Pro
+              </a>
+            </div>
+          ) : (
+            <div className="cf-card">
+              <h2>📄 Conectar facturación CFDI</h2>
+              <p className="sub">
+                Sube tu Certificado de Sello Digital (CSD) del SAT para timbrar
+                facturas a nombre de tu empresa. El RFC se toma del propio
+                certificado.
+              </p>
+
+              {emisor.certUploaded && !mostrarCsd ? (
+                <>
+                  <div className="cf-cfdi-ok">
+                    ✅ Emisor conectado
+                    {emisor.rfc ? ` · RFC ${emisor.rfc}` : ""}
+                  </div>
+                  <div className="cf-toggle-row">
+                    <div>
+                      <div className="tt">Modo de facturación</div>
+                      <div className="td">
+                        {emisor.livemode
+                          ? "Real: las facturas se timbran ante el SAT y son válidas."
+                          : "Pruebas: timbra facturas de prueba (no fiscales) para validar el flujo."}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className={`cf-switch ${emisor.livemode ? "on" : ""}`}
+                      disabled={conectandoCfdi}
+                      aria-label="Alternar modo real"
+                      onClick={() =>
+                        cfdiFetcher.submit(
+                          {
+                            intent: "cfdiLivemode",
+                            livemode: String(!emisor.livemode),
+                          },
+                          { method: "post" },
+                        )
+                      }
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="cf-btn secondary"
+                    style={{ marginTop: 14 }}
+                    onClick={() => setMostrarCsd(true)}
+                  >
+                    Actualizar certificado
+                  </button>
+                </>
+              ) : (
+                <cfdiFetcher.Form method="post" encType="multipart/form-data">
+                  <input type="hidden" name="intent" value="cfdiConnect" />
+                  <input
+                    type="hidden"
+                    name="legalName"
+                    value={config.fiscal.razonSocial}
+                  />
+                  <input
+                    type="hidden"
+                    name="taxSystem"
+                    value={config.fiscal.regimen}
+                  />
+                  <input type="hidden" name="zip" value={config.fiscal.cp} />
+
+                  {(!config.fiscal.razonSocial || !config.fiscal.cp) && (
+                    <div className="cf-warn">
+                      Completa tu <b>razón social</b> y <b>código postal</b>{" "}
+                      arriba antes de conectar.
+                    </div>
+                  )}
+
+                  <div className="cf-grid">
+                    <div className="cf-field">
+                      <label className="cf-label">Certificado (.cer)</label>
+                      <input
+                        className="cf-input"
+                        type="file"
+                        name="cer"
+                        accept=".cer"
+                        required
+                      />
+                    </div>
+                    <div className="cf-field">
+                      <label className="cf-label">Llave privada (.key)</label>
+                      <input
+                        className="cf-input"
+                        type="file"
+                        name="key"
+                        accept=".key"
+                        required
+                      />
+                    </div>
+                    <div className="cf-field full">
+                      <label className="cf-label">
+                        Contraseña de la llave (.key)
+                      </label>
+                      <input
+                        className="cf-input"
+                        type="password"
+                        name="password"
+                        placeholder="Contraseña del CSD"
+                        required
+                      />
+                      <span className="cf-hint">
+                        Es la contraseña que definiste al generar el CSD en el SAT
+                        (no es tu e.firma).
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                    <button
+                      type="submit"
+                      className="cf-btn primary"
+                      disabled={
+                        conectandoCfdi ||
+                        !config.fiscal.razonSocial ||
+                        !config.fiscal.cp
+                      }
+                    >
+                      {conectandoCfdi
+                        ? "Conectando…"
+                        : emisor.certUploaded
+                          ? "Actualizar certificado"
+                          : "Conectar emisor"}
+                    </button>
+                    {emisor.certUploaded && (
+                      <button
+                        type="button"
+                        className="cf-btn secondary"
+                        onClick={() => setMostrarCsd(false)}
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                </cfdiFetcher.Form>
+              )}
+            </div>
+          )}
+          </>
         ) : null}
 
         {/* ---------- NOTIFICACIONES ---------- */}

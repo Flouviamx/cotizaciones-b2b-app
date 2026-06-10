@@ -16,6 +16,41 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// Contador de timbrados CFDI por tienda y mes. Sirve para aplicar la cuota
+// mensual (Pro 250 / Plus 1000) y cobrar el excedente como usage charge.
+// `periodo` es la clave de mes calendario "YYYY-MM"; al cambiar de mes se
+// crea una fila nueva (la cuota se reinicia). `extraCobrado` lleva cuántas
+// facturas adicionales ya se cobraron, para no cobrar dos veces.
+model CfdiUsage {
+  id           String   @id @default(cuid())
+  shop         String
+  periodo      String   // "YYYY-MM" (mes calendario)
+  timbrados    Int      @default(0)
+  extraCobrado Int      @default(0)
+  aviso80      Boolean  @default(false) // ya se avisó al 80% de la cuota este mes
+  aviso100     Boolean  @default(false) // ya se avisó al 100% (cuota agotada)
+  updatedAt    DateTime @updatedAt
+
+  @@unique([shop, periodo])
+}
+
+// Emisor de CFDI por tienda (multi-tenant Facturapi). Cada comerciante tiene SU
+// propia organización en Facturapi, con su propio CSD/RFC. La llave "live" se
+// guarda CIFRADA (ver app/crypto.server.ts). La "test" se puede re-obtener con
+// la llave de cuenta, así que se guarda en claro.
+model FacturapiOrg {
+  shop           String   @id // dominio xxx.myshopify.com
+  organizationId String
+  liveKeyEnc     String? // llave live de la org, CIFRADA (iv:tag:datos)
+  testKey        String? // llave de pruebas (no sensible)
+  rfc            String? // RFC del emisor, leído del CSD
+  legalName      String?
+  certUploaded   Boolean  @default(false)
+  livemode       Boolean  @default(false) // false = pruebas, true = facturas reales
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 model Session {
   id            String    @id
   shop          String

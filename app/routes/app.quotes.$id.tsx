@@ -8,11 +8,13 @@ import { useFetcher, useLoaderData, useNavigate } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import { timbrarCFDI } from "../facturama.server";
+import { timbrarCFDI } from "../facturapi.server";
 import { notifyRequesterQuoteSent } from "../notify.server";
 import { mergeEmails } from "../email-templates";
 import { PLANES_PRO, TODOS_LOS_PLANES } from "../plans";
+import { registrarTimbrado } from "../cfdi-usage.server";
 import { construirHTMLcotizacion, mergePdfMarca } from "../pdf-cotizacion";
+import { BILLING_TEST } from "../billing.server";
 
 // Formatea un monto en la moneda BASE de la tienda (shopMoney) con separadores
 // de miles y el símbolo correcto. Shopify ya convirtió a la moneda del comerciante.
@@ -27,6 +29,25 @@ function formatoMoneda(amount: string | number, currency: string) {
   } catch {
     return `$${n.toFixed(2)} ${currency || ""}`.trim();
   }
+}
+
+// Mensaje del toast tras timbrar, incluyendo aviso de cuota/excedente CFDI.
+function mensajeCFDI(uso?: {
+  plan: "pro" | "plus" | null;
+  timbrados: number;
+  limite: number;
+  cobradoExtra: boolean;
+  montoCobrado: number;
+  topeAlcanzado: boolean;
+}): string {
+  if (!uso || uso.plan == null) return "Factura CFDI generada";
+  if (uso.topeAlcanzado) {
+    return "CFDI generada. Alcanzaste el tope de excedente: aprueba subir el límite en Planes para seguir facturando extra.";
+  }
+  if (uso.cobradoExtra) {
+    return `CFDI generada (${uso.timbrados}/${uso.limite}). Excedente: +$${uso.montoCobrado.toFixed(2)} USD.`;
+  }
+  return `Factura CFDI generada (${uso.timbrados}/${uso.limite} este mes)`;
 }
 
 function estadoLegible(status: string) {
@@ -109,13 +130,13 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
   const proCheck = await billing.check({
     plans: PLANES_PRO as any,
-    isTest: true,
+    isTest: BILLING_TEST,
   });
   const hasPro = proCheck.hasActivePayment;
 
   const paidCheck = await billing.check({
     plans: TODOS_LOS_PLANES as any,
-    isTest: true,
+    isTest: BILLING_TEST,
   });
   const hasPaid = paidCheck.hasActivePayment;
 
@@ -217,7 +238,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
-  const { admin, billing } = await authenticate.admin(request);
+  const { admin, billing, session } = await authenticate.admin(request);
   const id = `gid://shopify/DraftOrder/${params.id}`;
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
@@ -225,7 +246,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   // Algunas acciones son de pago (Plan Básico o Pro). Verificamos el plan en el
   // servidor para que el candado no se pueda saltar desde el cliente.
   const requierePago = async () => {
-    const c = await billing.check({ plans: TODOS_LOS_PLANES as any, isTest: true });
+    const c = await billing.check({ plans: TODOS_LOS_PLANES as any, isTest: BILLING_TEST });
     return c.hasActivePayment;
   };
 
@@ -477,7 +498,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       ),
     }));
 
-    const result = await timbrarCFDI({
+    const result = await timbrarCFDI(session.shop, {
       receiver: {
         rfc,
         name: get("Razón social"),
@@ -485,8 +506,6 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         fiscalRegime: get("Régimen fiscal"),
         taxZipCode: get("Código postal fiscal"),
       },
-      // eslint-disable-next-line no-undef
-      expeditionPlace: process.env.FACTURAMA_CP || get("Código postal fiscal"),
       items,
     });
 
@@ -505,7 +524,17 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         }`,
       { variables: { id, input: { customAttributes } } },
     );
-    return { ok: true, cfdiGenerated: true, uuid: result.uuid };
+
+    // Cuenta el timbrado del mes y cobra el excedente si pasó de la cuota
+    // (Pro 250 / Plus 1000). No bloquea: la factura ya se timbró.
+    const uso = await registrarTimbrado(
+      session.shop,
+      billing as any,
+      admin as any,
+      BILLING_TEST,
+    );
+
+    return { ok: true, cfdiGenerated: true, uuid: result.uuid, uso };
   }
 
   if (intent === "completarPedido") {
@@ -649,7 +678,7 @@ export default function QuoteDetail() {
               : fetcher.data.fiscalSaved
                 ? "Datos fiscales guardados"
                 : fetcher.data.cfdiGenerated
-                  ? "Factura CFDI generada"
+                  ? mensajeCFDI(fetcher.data.uso)
                   : fetcher.data.completed
                     ? "Cotización convertida en pedido"
                     : "Cambios guardados";

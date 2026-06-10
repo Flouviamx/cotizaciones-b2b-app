@@ -4,6 +4,7 @@ import { useLoaderData, useNavigate } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import { PLANES_PRO } from "../plans";
+import { BILLING_TEST } from "../billing.server";
 
 // Trae hasta 250 cotizaciones (Draft Orders) y deja que el cliente calcule los
 // KPIs según el rango de fechas elegido. Así el filtro es instantáneo.
@@ -11,7 +12,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, billing } = await authenticate.admin(request);
 
   // Analítica es una función del Plan Pro. Sin Pro mostramos el teaser.
-  const proCheck = await billing.check({ plans: PLANES_PRO as any, isTest: true });
+  const proCheck = await billing.check({ plans: PLANES_PRO as any, isTest: BILLING_TEST });
   if (!proCheck.hasActivePayment) {
     return { hasPro: false, quotes: [], currency: "MXN" };
   }

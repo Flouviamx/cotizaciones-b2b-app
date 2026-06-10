@@ -9,6 +9,7 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import { PLANES_PRO } from "../plans";
+import { BILLING_TEST } from "../billing.server";
 
 // El límite de crédito por empresa se guarda como metafield propio de la app
 // sobre la empresa (no requiere scope write_metafields).
@@ -18,7 +19,7 @@ const KEY_LIMITE = "credito_limite";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, billing } = await authenticate.admin(request);
 
-  const proCheck = await billing.check({ plans: PLANES_PRO as any, isTest: true });
+  const proCheck = await billing.check({ plans: PLANES_PRO as any, isTest: BILLING_TEST });
   const hasPro = proCheck.hasActivePayment;
 
   // La función "Empresas B2B" es del Plan Pro. Sin Pro mostramos el teaser.
