@@ -18,16 +18,23 @@
 //     Si tus precios en Shopify YA incluyen IVA, cambiar a tax_included: true.
 //   - product_key 01010101 (genérica), unit_key H87 (Pieza).
 
-import * as FacturapiNS from "facturapi";
+import { createRequire } from "node:module";
 import type FacturapiClient from "facturapi";
 import prisma from "./db.server";
 import { encryptSecret, decryptSecret } from "./crypto.server";
 
-// El SDK se publica como CJS con la clase en `.default`. Según cómo lo empaquete
-// el bundler (local vs. Vercel), el import default puede resolver al namespace en
-// vez de la clase ("Facturapi is not a constructor"). Tomamos el `.default` con
-// fallback para que funcione en ambos.
-const Facturapi = ((FacturapiNS as any).default ?? FacturapiNS) as {
+// El SDK se publica como CJS y la clase vive en `.default` del module.exports.
+// El import ESM (`import Facturapi from "facturapi"`) resolvía al objeto del
+// módulo, no a la clase, en el bundle de Vercel → "Facturapi is not a
+// constructor". Cargamos el CJS con require real (determinístico) y tomamos la
+// clase, desenredando los `.default` que pueda anidar el interop.
+const facturapiRequire = createRequire(import.meta.url);
+function resolverClase(mod: any): any {
+  let c = mod;
+  for (let i = 0; i < 4 && c && typeof c !== "function"; i++) c = c.default;
+  return c;
+}
+const Facturapi = resolverClase(facturapiRequire("facturapi")) as {
   new (apiKey: string, ...args: any[]): FacturapiClient;
 };
 
