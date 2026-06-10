@@ -18,11 +18,20 @@
 //     Si tus precios en Shopify YA incluyen IVA, cambiar a tax_included: true.
 //   - product_key 01010101 (genérica), unit_key H87 (Pieza).
 
-import Facturapi from "facturapi";
+import * as FacturapiNS from "facturapi";
+import type FacturapiClient from "facturapi";
 import prisma from "./db.server";
 import { encryptSecret, decryptSecret } from "./crypto.server";
 
-function userClient(): Facturapi {
+// El SDK se publica como CJS con la clase en `.default`. Según cómo lo empaquete
+// el bundler (local vs. Vercel), el import default puede resolver al namespace en
+// vez de la clase ("Facturapi is not a constructor"). Tomamos el `.default` con
+// fallback para que funcione en ambos.
+const Facturapi = ((FacturapiNS as any).default ?? FacturapiNS) as {
+  new (apiKey: string, ...args: any[]): FacturapiClient;
+};
+
+function userClient(): FacturapiClient {
   const key = process.env.FACTURAPI_USER_KEY;
   if (!key) {
     throw new Error("Falta FACTURAPI_USER_KEY en .env (llave de cuenta de Facturapi).");
@@ -81,7 +90,7 @@ export async function conectarEmisor(
   shop: string,
   input: ConnectInput,
 ): Promise<ConnectResult> {
-  let user: Facturapi;
+  let user: FacturapiClient;
   try {
     user = userClient();
   } catch (e: any) {

@@ -16,6 +16,19 @@ import { BILLING_TEST } from "../billing.server";
 const NS = "$app:flouvia";
 const KEY_LIMITE = "credito_limite";
 
+// Topes de paginación (guardas para tiendas Plus de alto volumen).
+const MAX_PAG_EMPRESAS = 20; // 20 × 50 = 1000 empresas
+const MAX_PAG_DRAFTS = 24; //   24 × 250 = 6000 cotizaciones activas
+
+function ajusteCatalogo(parent: any): string {
+  const adj = parent?.adjustment;
+  if (!adj || adj.value == null) return "";
+  const signo = adj.type === "PERCENTAGE_DECREASE" ? "−" : "+";
+  // value llega como "10.0" → mostramos sin decimales innecesarios.
+  const v = parseFloat(String(adj.value));
+  return `${signo}${Number.isInteger(v) ? v : v.toFixed(1)}%`;
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, billing } = await authenticate.admin(request);
 
@@ -24,96 +37,174 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   // La función "Empresas B2B" es del Plan Pro. Sin Pro mostramos el teaser.
   if (!hasPro) {
-    return { hasPro: false, empresas: [], currency: "MXN" };
+    return { hasPro: false, empresas: [], currency: "MXN", truncado: false };
   }
 
-  // 1) Empresas con su límite de crédito (metafield) y datos de contacto.
-  const compResp = await admin.graphql(
-    `#graphql
-      query empresasB2B {
-        shop { currencyCode }
-        companies(first: 50) {
-          edges {
-            node {
-              id
-              name
-              ordersCount { count }
-              totalSpent { amount }
-              contactCount
-              mainContact { customer { displayName email } }
-              locations(first: 1) {
-                edges {
-                  node {
-                    buyerExperienceConfiguration {
-                      paymentTermsTemplate { name }
+  // 1) Empresas con su límite de crédito (metafield), contacto, ubicaciones y
+  //    catálogos (lista de precios) por ubicación. Paginamos TODO (sin tope de 50).
+  let currency = "MXN";
+  const companies: any[] = [];
+  let cursorComp: string | null = null;
+  let truncadoEmpresas = false;
+  for (let pag = 0; pag < MAX_PAG_EMPRESAS; pag++) {
+    const compResp: any = await admin.graphql(
+      `#graphql
+        query empresasB2B($cursor: String) {
+          shop { currencyCode }
+          companies(first: 50, after: $cursor) {
+            pageInfo { hasNextPage endCursor }
+            edges {
+              node {
+                id
+                name
+                ordersCount { count }
+                totalSpent { amount }
+                contactCount
+                locationsCount { count }
+                mainContact { customer { displayName email } }
+                locations(first: 5) {
+                  edges {
+                    node {
+                      id
+                      name
+                      shippingAddress { city province country }
+                      buyerExperienceConfiguration {
+                        paymentTermsTemplate { name }
+                      }
+                      catalogs(first: 3) {
+                        edges {
+                          node {
+                            title
+                            status
+                            priceList {
+                              name
+                              parent { adjustment { type value } }
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }
-              }
-              metafield(namespace: "${NS}", key: "${KEY_LIMITE}") { value }
-            }
-          }
-        }
-      }`,
-  );
-  const compJson: any = await compResp.json();
-  const currency = compJson.data?.shop?.currencyCode ?? "MXN";
-  const companies = (compJson.data?.companies?.edges ?? []).map((e: any) => e.node);
-
-  // 2) Cotizaciones (Draft Orders) para calcular el crédito EN USO por empresa
-  //    = suma de las abiertas + enviadas (aún no cobradas).
-  const doResp = await admin.graphql(
-    `#graphql
-      query draftPorEmpresa {
-        draftOrders(first: 250, sortKey: UPDATED_AT, reverse: true) {
-          edges {
-            node {
-              status
-              totalPriceSet { presentmentMoney { amount } }
-              purchasingEntity {
-                __typename
-                ... on PurchasingCompany { company { id } }
+                metafield(namespace: "${NS}", key: "${KEY_LIMITE}") { value }
               }
             }
           }
-        }
-      }`,
-  );
-  const doJson: any = await doResp.json();
-  const usoPorEmpresa = new Map<string, { usado: number; cotizaciones: number }>();
-  for (const e of doJson.data?.draftOrders?.edges ?? []) {
-    const n = e.node;
-    const compId = n.purchasingEntity?.company?.id;
-    if (!compId) continue;
-    const cur = usoPorEmpresa.get(compId) ?? { usado: 0, cotizaciones: 0 };
-    cur.cotizaciones += 1;
-    if (n.status === "OPEN" || n.status === "INVOICE_SENT") {
-      cur.usado += parseFloat(n.totalPriceSet?.presentmentMoney?.amount ?? "0");
+        }`,
+      { variables: { cursor: cursorComp } },
+    );
+    const compJson: any = await compResp.json();
+    currency = compJson.data?.shop?.currencyCode ?? currency;
+    const conn = compJson.data?.companies;
+    for (const e of conn?.edges ?? []) companies.push(e.node);
+    if (conn?.pageInfo?.hasNextPage) {
+      cursorComp = conn.pageInfo.endCursor;
+      if (pag === MAX_PAG_EMPRESAS - 1) truncadoEmpresas = true;
+    } else {
+      break;
     }
-    usoPorEmpresa.set(compId, cur);
+  }
+
+  // 2) Cotizaciones ACTIVAS (Draft Orders OPEN + INVOICE_SENT) para el crédito EN
+  //    USO por empresa. Filtramos por estado → solo las activas (acotado por
+  //    naturaleza) y paginamos TODO, así el saldo es correcto a cualquier escala.
+  //    Moneda: shopMoney (moneda base de la tienda), igual que el límite.
+  const usoPorEmpresa = new Map<string, { usado: number; activas: number }>();
+  let cursorDO: string | null = null;
+  let truncadoDrafts = false;
+  for (let pag = 0; pag < MAX_PAG_DRAFTS; pag++) {
+    const doResp: any = await admin.graphql(
+      `#graphql
+        query draftActivosPorEmpresa($cursor: String) {
+          draftOrders(first: 250, after: $cursor, query: "status:OPEN OR status:INVOICE_SENT") {
+            pageInfo { hasNextPage endCursor }
+            edges {
+              node {
+                totalPriceSet { shopMoney { amount } }
+                purchasingEntity {
+                  __typename
+                  ... on PurchasingCompany { company { id } }
+                }
+              }
+            }
+          }
+        }`,
+      { variables: { cursor: cursorDO } },
+    );
+    const doJson: any = await doResp.json();
+    const conn = doJson.data?.draftOrders;
+    for (const e of conn?.edges ?? []) {
+      const n = e.node;
+      const compId = n.purchasingEntity?.company?.id;
+      if (!compId) continue;
+      const cur = usoPorEmpresa.get(compId) ?? { usado: 0, activas: 0 };
+      cur.activas += 1;
+      cur.usado += parseFloat(n.totalPriceSet?.shopMoney?.amount ?? "0");
+      usoPorEmpresa.set(compId, cur);
+    }
+    if (conn?.pageInfo?.hasNextPage) {
+      cursorDO = conn.pageInfo.endCursor;
+      if (pag === MAX_PAG_DRAFTS - 1) truncadoDrafts = true;
+    } else {
+      break;
+    }
   }
 
   const empresas = companies.map((c: any) => {
-    const uso = usoPorEmpresa.get(c.id) ?? { usado: 0, cotizaciones: 0 };
+    const uso = usoPorEmpresa.get(c.id) ?? { usado: 0, activas: 0 };
     const limite = c.metafield?.value ? parseFloat(c.metafield.value) : 0;
+
+    const ubicaciones = (c.locations?.edges ?? []).map((le: any) => {
+      const ln = le.node;
+      const dir = [ln.shippingAddress?.city, ln.shippingAddress?.province]
+        .filter(Boolean)
+        .join(", ");
+      const catalogos = (ln.catalogs?.edges ?? []).map((ce: any) => ({
+        title: ce.node.title,
+        activo: ce.node.status === "ACTIVE",
+        lista: ce.node.priceList?.name ?? "",
+        ajuste: ajusteCatalogo(ce.node.priceList?.parent),
+      }));
+      return {
+        id: ln.id,
+        name: ln.name,
+        dir,
+        term: ln.buyerExperienceConfiguration?.paymentTermsTemplate?.name ?? "",
+        catalogos,
+      };
+    });
+
+    // Término para el badge de la tarjeta: si todas las ubicaciones comparten
+    // término lo mostramos; si hay varios distintos, "Varios".
+    const termSet = new Set<string>(
+      ubicaciones.map((u: any) => u.term).filter(Boolean),
+    );
+    const terminos =
+      termSet.size > 1 ? "Varios" : (termSet.values().next().value ?? "");
+
     return {
       id: c.id,
       name: c.name,
       limite,
       usado: uso.usado,
-      cotizaciones: uso.cotizaciones,
+      activas: uso.activas,
       totalComprado: parseFloat(c.totalSpent?.amount ?? "0"),
       ordenes: c.ordersCount?.count ?? 0,
       contactos: c.contactCount ?? 0,
       contactoNombre: c.mainContact?.customer?.displayName ?? "",
       contactoEmail: c.mainContact?.customer?.email ?? "",
-      terminos:
-        c.locations?.edges?.[0]?.node?.buyerExperienceConfiguration
-          ?.paymentTermsTemplate?.name ?? "",
+      ubicacionesCount: c.locationsCount?.count ?? ubicaciones.length,
+      ubicaciones,
+      terminos,
     };
   });
 
-  return { hasPro: true, empresas, currency };
+  return {
+    hasPro: true,
+    empresas,
+    currency,
+    truncado: truncadoEmpresas || truncadoDrafts,
+  };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -167,6 +258,36 @@ const CSS = `
   background: rgba(255,255,255,.12); border-radius: 50%; }
 .em-hero h1 { font-size: 26px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.02em; position: relative; }
 .em-hero p { font-size: 15px; margin: 0; opacity: .92; position: relative; max-width: 580px; }
+
+/* Panel de KPIs de cartera B2B */
+.em-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.em-kpi { background: #fff; border: 1px solid #ececf0; border-radius: 16px; padding: 16px 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.em-kpi .kl { font-size: 12px; color: #6b7280; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.em-kpi .kv { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin-top: 6px; line-height: 1.1; }
+.em-kpi .ks { font-size: 11.5px; color: #9099a8; font-weight: 600; margin-top: 3px; }
+.em-kpi.alert { background: linear-gradient(135deg, #fff5f5, #fff); border-color: #f6caca; }
+.em-kpi.alert .kv { color: #dc2626; }
+
+/* Barra de herramientas: buscar + ordenar + filtros */
+.em-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+.em-search { position: relative; flex: 1 1 240px; min-width: 200px; }
+.em-search input { width: 100%; padding: 10px 12px 10px 36px; border: 1px solid #d8d8e0; border-radius: 11px;
+  font-size: 14px; outline: none; font-family: inherit; background: #fff; }
+.em-search input:focus { border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,.15); }
+.em-search .ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: .5; }
+.em-sort { padding: 10px 12px; border: 1px solid #d8d8e0; border-radius: 11px; font-size: 13.5px;
+  font-family: inherit; background: #fff; font-weight: 600; color: #374151; outline: none; cursor: pointer; }
+.em-sort:focus { border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,.15); }
+.em-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.em-chip { border: 1px solid #d8d8e0; background: #fff; border-radius: 999px; padding: 8px 13px;
+  font-size: 12.5px; font-weight: 700; color: #6b7280; cursor: pointer; transition: all .12s; }
+.em-chip:hover { border-color: #cfe0fc; }
+.em-chip.on { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+.em-chip.on.warn { background: #dc2626; border-color: #dc2626; }
+.em-count { font-size: 12.5px; color: #9099a8; font-weight: 600; margin-bottom: 14px; }
+.em-trunc { font-size: 12.5px; color: #92600a; background: #fff8eb; border: 1px solid #f3e0b5;
+  border-radius: 10px; padding: 9px 12px; margin-bottom: 14px; font-weight: 600; }
 
 /* Grid de empresas */
 .em-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
@@ -244,7 +365,21 @@ const CSS = `
 .em-dr-credit .track span.over { background: linear-gradient(90deg, #dc2626, #ef4444); }
 .em-dr-credit .nums { display: flex; justify-content: space-between; font-size: 12.5px; color: #6b7280; font-weight: 600; }
 
-.em-dr-edit { margin-top: 20px; }
+/* Ubicaciones + catálogos en el drawer */
+.em-dr-locs { margin-top: 22px; }
+.em-dr-locs .hd { font-size: 13px; font-weight: 800; color: #374151; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 7px; }
+.em-loc { border: 1px solid #ececf0; border-radius: 13px; padding: 13px 15px; margin-bottom: 10px; background: #fcfcfd; }
+.em-loc .ln { font-size: 14px; font-weight: 800; letter-spacing: -0.01em; }
+.em-loc .la { font-size: 12.5px; color: #9099a8; font-weight: 600; margin-top: 2px; }
+.em-loc .lmeta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.em-tag { font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 999px; white-space: nowrap; }
+.em-tag.term { background: #eef3ff; color: #1a56c4; }
+.em-tag.cat { background: #f0fdf4; color: #15803d; }
+.em-tag.catoff { background: #f3f4f6; color: #9099a8; }
+.em-tag.adj { background: #fef3e8; color: #b45309; }
+
+.em-dr-edit { margin-top: 22px; }
 .em-dr-edit label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
 .em-dr-input { display: flex; gap: 8px; }
 .em-dr-input .pre { display: flex; align-items: center; padding: 0 12px; border: 1px solid #d8d8e0;
@@ -270,8 +405,11 @@ function nivelCredito(usado: number, limite: number): "ok" | "warn" | "over" {
 
 type Empresa = ReturnType<typeof useLoaderData<typeof loader>>["empresas"][number];
 
+type FiltroId = "todas" | "credito" | "over" | "nolimit";
+type OrdenId = "uso" | "riesgo" | "comprado" | "nombre";
+
 export default function Empresas() {
-  const { hasPro, empresas, currency } = useLoaderData<typeof loader>();
+  const { hasPro, empresas, currency, truncado } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const shopify = useAppBridge();
   const fetcher = useFetcher<typeof action>();
@@ -283,6 +421,11 @@ export default function Empresas() {
   const [abiertaId, setAbiertaId] = useState<string | null>(null);
   const [limiteInput, setLimiteInput] = useState("");
 
+  // Buscar / ordenar / filtrar (todo en cliente sobre la lista ya cargada).
+  const [busqueda, setBusqueda] = useState("");
+  const [filtro, setFiltro] = useState<FiltroId>("todas");
+  const [orden, setOrden] = useState<OrdenId>("uso");
+
   const fmt = useMemo(
     () =>
       new Intl.NumberFormat("es-MX", {
@@ -292,6 +435,44 @@ export default function Empresas() {
       }),
     [currency],
   );
+
+  // KPIs de cartera (sobre TODA la lista, no la filtrada).
+  const kpis = useMemo(() => {
+    let otorgado = 0,
+      enUso = 0,
+      disponible = 0,
+      sobre = 0,
+      conLimite = 0;
+    for (const e of lista) {
+      enUso += e.usado;
+      if (e.limite > 0) {
+        otorgado += e.limite;
+        disponible += Math.max(0, e.limite - e.usado);
+        conLimite += 1;
+        if (e.usado >= e.limite) sobre += 1;
+      }
+    }
+    return { otorgado, enUso, disponible, sobre, conLimite, total: lista.length };
+  }, [lista]);
+
+  const visibles = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    const pct = (e: Empresa) => (e.limite > 0 ? e.usado / e.limite : 0);
+    return lista
+      .filter((e) => {
+        if (q && !e.name.toLowerCase().includes(q)) return false;
+        if (filtro === "credito") return e.limite > 0;
+        if (filtro === "over") return e.limite > 0 && e.usado >= e.limite;
+        if (filtro === "nolimit") return e.limite <= 0;
+        return true;
+      })
+      .sort((a, b) => {
+        if (orden === "nombre") return a.name.localeCompare(b.name, "es");
+        if (orden === "comprado") return b.totalComprado - a.totalComprado;
+        if (orden === "riesgo") return pct(b) - pct(a);
+        return b.usado - a.usado; // "uso"
+      });
+  }, [lista, busqueda, filtro, orden]);
 
   const abierta = lista.find((e) => e.id === abiertaId) ?? null;
 
@@ -383,59 +564,152 @@ export default function Empresas() {
             </div>
           </div>
         ) : (
-          <div className="em-grid">
-            {lista.map((e) => {
-              const nivel = nivelCredito(e.usado, e.limite);
-              const pct =
-                e.limite > 0
-                  ? Math.min(100, (e.usado / e.limite) * 100)
-                  : 0;
-              return (
-                <div className="em-card" key={e.id} onClick={() => abrir(e)}>
-                  <div className="head">
-                    <div>
-                      <div className="nm">{e.name}</div>
-                      {e.contactoNombre ? (
-                        <div className="ct">{e.contactoNombre}</div>
-                      ) : null}
-                    </div>
-                    {e.terminos ? (
-                      <span className="em-term">{e.terminos}</span>
-                    ) : null}
-                  </div>
-
-                  <div className="em-credit">
-                    {e.limite > 0 ? (
-                      <>
-                        <div className="crow">
-                          <span className="l">Crédito en uso</span>
-                          <span className="v">
-                            {fmt.format(e.usado)} / {fmt.format(e.limite)}
-                          </span>
-                        </div>
-                        <div className="em-track">
-                          <span className={nivel} style={{ width: `${pct}%` }} />
-                        </div>
-                      </>
-                    ) : (
-                      <div className="em-nolimit">
-                        Sin límite de crédito · <b>toca para definir</b>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="em-foot">
-                    <span className="it">
-                      <b>{e.cotizaciones}</b> cotizaciones
-                    </span>
-                    <span className="it">
-                      <b>{e.ordenes}</b> pedidos
-                    </span>
-                  </div>
+          <>
+            {/* KPIs de cartera */}
+            <div className="em-kpis">
+              <div className="em-kpi">
+                <div className="kl">💳 Crédito otorgado</div>
+                <div className="kv">{fmt.format(kpis.otorgado)}</div>
+                <div className="ks">{kpis.conLimite} empresas con límite</div>
+              </div>
+              <div className="em-kpi">
+                <div className="kl">📊 Crédito en uso</div>
+                <div className="kv">{fmt.format(kpis.enUso)}</div>
+                <div className="ks">cotizaciones activas sin cobrar</div>
+              </div>
+              <div className="em-kpi">
+                <div className="kl">✅ Disponible</div>
+                <div className="kv">{fmt.format(kpis.disponible)}</div>
+                <div className="ks">sobre el crédito otorgado</div>
+              </div>
+              <div className={`em-kpi ${kpis.sobre > 0 ? "alert" : ""}`}>
+                <div className="kl">⚠️ Sobre su límite</div>
+                <div className="kv">{kpis.sobre}</div>
+                <div className="ks">
+                  {kpis.sobre === 1 ? "empresa excedida" : "empresas excedidas"}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            </div>
+
+            {/* Buscar / ordenar / filtrar */}
+            <div className="em-tools">
+              <div className="em-search">
+                <span className="ic">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Buscar empresa…"
+                  value={busqueda}
+                  onChange={(ev) => setBusqueda(ev.target.value)}
+                />
+              </div>
+              <select
+                className="em-sort"
+                value={orden}
+                onChange={(ev) => setOrden(ev.target.value as OrdenId)}
+              >
+                <option value="uso">Más crédito en uso</option>
+                <option value="riesgo">Mayor % de su límite</option>
+                <option value="comprado">Más comprado (histórico)</option>
+                <option value="nombre">Nombre (A–Z)</option>
+              </select>
+              <div className="em-chips">
+                {([
+                  ["todas", "Todas"],
+                  ["credito", "Con crédito"],
+                  ["over", "Sobre límite"],
+                  ["nolimit", "Sin límite"],
+                ] as [FiltroId, string][]).map(([id, label]) => (
+                  <button
+                    key={id}
+                    className={`em-chip ${filtro === id ? "on" : ""} ${id === "over" ? "warn" : ""}`}
+                    onClick={() => setFiltro(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {truncado ? (
+              <div className="em-trunc">
+                Mostrando una parte de tus datos por volumen. Usa el buscador para
+                encontrar una empresa específica.
+              </div>
+            ) : null}
+
+            <div className="em-count">
+              {visibles.length} de {lista.length} empresas
+            </div>
+
+            {visibles.length === 0 ? (
+              <div className="em-empty">
+                <div className="ic">🔍</div>
+                <div className="t">Sin resultados</div>
+                <div className="d">
+                  Ninguna empresa coincide con tu búsqueda o filtro.
+                </div>
+              </div>
+            ) : (
+              <div className="em-grid">
+                {visibles.map((e) => {
+                  const nivel = nivelCredito(e.usado, e.limite);
+                  const pct =
+                    e.limite > 0
+                      ? Math.min(100, (e.usado / e.limite) * 100)
+                      : 0;
+                  return (
+                    <div className="em-card" key={e.id} onClick={() => abrir(e)}>
+                      <div className="head">
+                        <div>
+                          <div className="nm">{e.name}</div>
+                          {e.contactoNombre ? (
+                            <div className="ct">{e.contactoNombre}</div>
+                          ) : null}
+                        </div>
+                        {e.terminos ? (
+                          <span className="em-term">{e.terminos}</span>
+                        ) : null}
+                      </div>
+
+                      <div className="em-credit">
+                        {e.limite > 0 ? (
+                          <>
+                            <div className="crow">
+                              <span className="l">Crédito en uso</span>
+                              <span className="v">
+                                {fmt.format(e.usado)} / {fmt.format(e.limite)}
+                              </span>
+                            </div>
+                            <div className="em-track">
+                              <span className={nivel} style={{ width: `${pct}%` }} />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="em-nolimit">
+                            Sin límite de crédito · <b>toca para definir</b>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="em-foot">
+                        <span className="it">
+                          <b>{e.activas}</b> activas
+                        </span>
+                        <span className="it">
+                          <b>{e.ordenes}</b> pedidos
+                        </span>
+                        {e.ubicacionesCount > 1 ? (
+                          <span className="it">
+                            <b>{e.ubicacionesCount}</b> ubic.
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -460,8 +734,8 @@ export default function Empresas() {
                 <span className="v">{abierta.terminos || "—"}</span>
               </div>
               <div className="em-dr-row">
-                <span className="k">Cotizaciones</span>
-                <span className="v">{abierta.cotizaciones}</span>
+                <span className="k">Cotizaciones activas</span>
+                <span className="v">{abierta.activas}</span>
               </div>
               <div className="em-dr-row">
                 <span className="k">Pedidos completados</span>
@@ -475,6 +749,54 @@ export default function Empresas() {
                 <span className="k">Contactos en la empresa</span>
                 <span className="v">{abierta.contactos}</span>
               </div>
+              <div className="em-dr-row">
+                <span className="k">Ubicaciones</span>
+                <span className="v">{abierta.ubicacionesCount}</span>
+              </div>
+
+              {/* Ubicaciones con sus términos y catálogo (lista de precios) */}
+              {abierta.ubicaciones.length > 0 ? (
+                <div className="em-dr-locs">
+                  <div className="hd">📍 Ubicaciones y catálogos</div>
+                  {abierta.ubicaciones.map((u: any) => (
+                    <div className="em-loc" key={u.id}>
+                      <div className="ln">{u.name}</div>
+                      {u.dir ? <div className="la">{u.dir}</div> : null}
+                      <div className="lmeta">
+                        {u.term ? (
+                          <span className="em-tag term">{u.term}</span>
+                        ) : null}
+                        {u.catalogos.map((c: any, i: number) => (
+                          <span
+                            key={i}
+                            className={`em-tag ${c.activo ? "cat" : "catoff"}`}
+                          >
+                            {c.title}
+                            {c.lista && c.lista !== c.title ? ` · ${c.lista}` : ""}
+                          </span>
+                        ))}
+                        {u.catalogos
+                          .filter((c: any) => c.ajuste)
+                          .map((c: any, i: number) => (
+                            <span key={`a${i}`} className="em-tag adj">
+                              {c.ajuste}
+                            </span>
+                          ))}
+                        {!u.term && u.catalogos.length === 0 ? (
+                          <span className="em-tag catoff">
+                            Sin catálogo ni términos
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                  {abierta.ubicacionesCount > abierta.ubicaciones.length ? (
+                    <div className="la" style={{ marginTop: 4 }}>
+                      +{abierta.ubicacionesCount - abierta.ubicaciones.length} ubicaciones más
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               {/* Barra de crédito */}
               <div className="em-dr-credit">
