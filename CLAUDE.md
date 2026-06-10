@@ -254,6 +254,11 @@ Orden en `app.tsx`: **Inicio** → **Cotizaciones** → **Empresas** → **Anal�
 - Hostear `PRIVACY.md` en URL pública (https://flouvia.com/privacidad).
 - Completar listing en Partner Dashboard (ver `LISTING.md`).
 - App necesita URL de producción real (el `application_url` sigue en example.com).
-- CFDI (multi-tenant): validar el flujo en vivo con una cuenta real de Facturapi → `FACTURAPI_USER_KEY` + `FACTURAPI_ENC_KEY` en Vercel. Probar: conectar emisor (subir CSD de prueba en Configuración → Datos fiscales) → timbrar en modo Pruebas → afinar payload si hay errores de claves SAT / `tax_system` / `tax_included` → alternar a modo Real. El comerciante necesita su propio CSD del SAT (de SU RFC).
+- CFDI (multi-tenant): **VALIDADO en modo Pruebas** (jun 2026) — conectar emisor con CSD de prueba del SAT
+  (EKU9003173C9, contraseña `12345678a`, en `csd-pruebas/`) + timbrar receptor público general
+  (`XAXX010101000`/`616`/`S01`/CP 26015) devolvió folio fiscal (UUID) correcto en Vercel. **Falta para Real:**
+  cada comerciante conecta SU propio CSD del SAT (de SU RFC) y alterna a modo Real (`setLivemode`). Pendiente
+  afinar para producción: `tax_included` según precios reales de la tienda y `product_key`/`unit_key` por
+  producto (hoy genéricos 01010101/H87) — relevante con receptor nominativo, no con público general.
 - `app.quotes.new.tsx`: leer `config.credito.porDefecto` del metafield para preseleccionar el término al crear cotización manual.
 - Webhooks GDPR ya están (`webhooks.customers.*`, `webhooks.shop.redact`).

@@ -134,30 +134,20 @@ Account description: Acceso completo al admin de la tienda de prueba con la app 
 
 Para probar Flouvia Cotizaciones B2B:
 
-FLUJO DEL VENDEDOR (admin de Shopify):
+VENDEDOR (admin):
+1. Abre la app en Apps → Flouvia. Si no tienes plan, en "Planes" elige "Plan Pro Mensual" (modo TEST, sin cargo) y aprueba.
+2. "Cotizaciones" → "Nueva cotización": elige productos, cantidades, términos de crédito y cliente → "Crear".
+3. Abre la cotización: edita precios, aplica descuento, asigna empresa; usa "Abrir link de pago", "Descargar PDF", "Enviar por email" y "Convertir en pedido".
+4. "Empresas": crédito por empresa. "Analítica": ingresos y conversión. "Formulario": campos del formulario (Pro).
+5. "Configuración": pestañas Datos fiscales, Notificaciones, Correos, Crédito, Botón y PDF.
+6. CFDI 4.0 (Pro): en "Configuración" → "Datos fiscales" → "Conectar facturación CFDI" sube tu CSD del SAT (.cer + .key + contraseña) y conecta. Deja el toggle en "Pruebas". Para probar usa el CSD público del SAT: RFC EKU9003173C9, contraseña 12345678a.
+7. Emitir factura: en una cotización, sección "Datos fiscales (CFDI)", captura el RFC del cliente → "Generar factura CFDI" (sale el folio/UUID). Receptor de prueba: RFC XAXX010101000, régimen 616, uso S01, CP 26015.
 
-1. Abre la app desde el admin → Apps → Flouvia Cotizaciones B2B.
-2. Si no tienes plan activo, verás la página de Planes. Elige "Plan Pro Mensual" (modo TEST, sin cargo). Aprueba en la pantalla de Shopify.
-3. El dashboard de Inicio muestra la guía de primeros pasos y la actividad reciente.
-4. Ve a "Cotizaciones" → "Nueva cotización": selecciona productos, ajusta cantidades, elige términos de crédito y cliente → "Crear cotización".
-5. Abre la cotización: edita precios por producto, aplica descuento, asigna empresa. Da clic en "Abrir link de pago", "Descargar PDF" y "Enviar por email".
-6. En la misma cotización, da clic en "Convertir en pedido" para crear el pedido de Shopify con un clic.
-7. Ve a "Empresas" para ver el crédito disponible por empresa compradora.
-8. Ve a "Analítica" para ver ingresos, conversión y ticket promedio.
-9. Ve a "Formulario" para personalizar los campos del formulario de cotización (Plan Pro).
-10. Ve a "Configuración" (pestañas: Datos fiscales, Notificaciones, Correos, Crédito, Botón, PDF) para personalizar el botón, las plantillas de correo, el PDF y los datos fiscales CFDI.
-
-FLUJO DEL COMPRADOR (storefront):
-
-1. Ve a la tienda de desarrollo y agrega un producto al carrito.
-2. Para añadir el botón hay dos vías:
-   a) App embed (recomendado): Admin → Tienda online → Temas → Personalizar → en el panel izquierdo "Incrustaciones de la app" (App embeds) → activa "Flouvia" → enciende el botón flotante, el botón en /cart y/o el botón en cada tarjeta de producto → Guardar.
-   b) App block: en la página del Carrito o de Producto → Agregar bloque → Apps → Solicitar cotización → Guardar.
-3. Verás el botón "Solicitar cotización" (en el carrito, en la página de producto o flotante). Ábrelo. Desde la página de producto puedes cotizar ese producto aunque el carrito esté vacío.
-4. Paso 1 — Productos: edita cantidades o quita ítems.
-5. Paso 2 — Contacto: llena nombre, email, empresa, RFC y términos de crédito (campos extra visibles en Plan Pro).
-6. Paso 3 — Revisar: confirma el resumen y envía. Aparece el folio de confirmación (#D001).
-7. Regresa al admin → la cotización nueva aparece con el badge "Desde la tienda".
+COMPRADOR (tienda):
+1. Agrega un producto al carrito.
+2. Activa el botón: Tienda online → Temas → Personalizar → "Incrustaciones de la app" → activa "Flouvia" y enciende el botón flotante, en /cart y/o en tarjetas de producto → Guardar. (Alternativa: en Carrito o Producto → Agregar bloque → Apps → Solicitar cotización.)
+3. Abre "Solicitar cotización". Paso 1 Productos (edita/quita ítems). Paso 2 Contacto (nombre, email, empresa, RFC, términos; campos extra en Pro). Paso 3 Revisar → envía. Aparece el folio (#D001).
+4. En el admin, la cotización aparece con el badge "Desde la tienda".
 
 ---
 

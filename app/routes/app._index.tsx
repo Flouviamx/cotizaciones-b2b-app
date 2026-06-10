@@ -113,8 +113,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // config inválida o ausente: tratamos el paso como pendiente
   }
 
-  // Link directo al editor de temas (se abre en pestaña nueva, fuera del iframe).
-  const themeEditorUrl = `https://${session.shop}/admin/themes/current/editor`;
+  // Deep link al editor de temas con el panel de "Incrustaciones de la app" ya abierto
+  // (?context=apps). Lleva al merchant directo a donde activa el embed de Flouvia, en vez
+  // de soltarlo en el editor genérico. Se abre en pestaña nueva, fuera del iframe.
+  const themeEditorUrl = `https://${session.shop}/admin/themes/current/editor?context=apps`;
 
   return { activos, quotes, shopName, botonActivo, fiscalListo, themeEditorUrl };
 };

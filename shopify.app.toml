@@ -7,31 +7,12 @@ name = "Flouvia Cotizaciones B2B"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products,write_metaobjects,write_metaobject_definitions,write_draft_orders,write_customers,read_companies"
-
-[product.metafields.app.demo_info]
-type = "single_line_text_field"
-name = "Demo Source Info"
-description = "Tracks products created by the Shopify app template for development"
-
-  [product.metafields.app.demo_info.access]
-  admin = "merchant_read_write"
-
-[metaobjects.app.example]
-name = "Example"
-description = "An example metaobject definition created by this template"
-
-  [metaobjects.app.example.access]
-  admin = "merchant_read_write"
-
-[metaobjects.app.example.fields.title]
-name = "Title"
-type = "single_line_text_field"
-required = true
-
-[metaobjects.app.example.fields.description]
-name = "Description"
-type = "multi_line_text_field"
+# Scopes mínimos: solo lo que la app usa.
+#   read_products      → query de productos/variantes (app.quotes._index) + resourcePicker
+#   write_draft_orders → las cotizaciones SON draft orders
+#   write_customers    → customerCreate al crear cotización desde la tienda (create.tsx)
+#   read_companies     → Empresas B2B (app.empresas)
+scopes = "read_products,write_draft_orders,write_customers,read_companies"
 
 [webhooks]
 api_version = "2026-07"
