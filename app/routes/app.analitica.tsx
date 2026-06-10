@@ -222,6 +222,7 @@ const CSS = `
 .an-cfdi .note b { color: #b45309; }
 
 .an-section-title { font-size: 18px; font-weight: 750; margin: 4px 0 14px; letter-spacing: -0.01em; }
+.an-section-title.sep { margin-top: 30px; }
 .an-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 .an-card { background: #fff; border: 1px solid #ececf0; border-radius: 18px; padding: 22px 24px;
   box-shadow: 0 1px 3px rgba(0,0,0,.04); }
@@ -274,6 +275,12 @@ const CSS = `
 
 .an-empty { text-align: center; color: #6b7280; padding: 30px 16px; border: 1px dashed #d8d8e0;
   border-radius: 14px; background: #fafafb; font-size: 14px; }
+
+/* Forzar impresión de colores/degradados (barras, KPIs, embudo, etc.) */
+.an-hero, .an-kpi .ic, .an-bar span, .an-tbar, .an-tbar .cob, .an-dbar span,
+.an-cfdi .track span, .an-delta, .an-insight, .an-kpi.good, .an-kpi.accent {
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
 
 @media print {
   .an-noprint { display: none !important; }
@@ -993,7 +1000,7 @@ export default function Analitica() {
             </div>
 
             {/* Desglose B2B: empresas + términos de crédito */}
-            <div className="an-section-title">Desglose B2B</div>
+            <div className="an-section-title sep">Desglose B2B</div>
             <div className="an-cols">
               <div className="an-card">
                 <h3>🏢 Por empresa</h3>

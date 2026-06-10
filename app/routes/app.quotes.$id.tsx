@@ -481,12 +481,28 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     );
     const j: any = await r.json();
     const attrs = j.data?.draftOrder?.customAttributes ?? [];
-    const get = (k: string) => attrs.find((a: any) => a.key === k)?.value ?? "";
+    const saved = (k: string) => attrs.find((a: any) => a.key === k)?.value ?? "";
+    // Prefiere lo que viene del formulario (lo que el comerciante ve en pantalla);
+    // si un campo no se envió, cae en lo ya guardado en la cotización. Así "Generar"
+    // ya no exige darle "Guardar datos fiscales" antes.
+    const campo = (name: string, savedKey: string) => {
+      const v = formData.get(name);
+      return v != null && String(v).trim() !== ""
+        ? String(v).trim()
+        : saved(savedKey);
+    };
 
-    const rfc = get("RFC");
-    if (!rfc) {
+    const rfc = campo("rfc", "RFC").toUpperCase();
+    const razonSocial = campo("razonSocial", "Razón social");
+    const regimen = campo("regimen", "Régimen fiscal");
+    const usoCfdi = campo("usoCfdi", "Uso de CFDI");
+    const cp = campo("cp", "Código postal fiscal");
+
+    if (!/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/.test(rfc)) {
       return {
-        error: "Falta el RFC del cliente. Guárdalo en Datos fiscales primero.",
+        error: rfc
+          ? `El RFC del cliente "${rfc}" no tiene un formato válido (12 o 13 caracteres).`
+          : "Falta el RFC del cliente. Captúralo en Datos fiscales.",
       };
     }
 
@@ -501,18 +517,24 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     const result = await timbrarCFDI(session.shop, {
       receiver: {
         rfc,
-        name: get("Razón social"),
-        cfdiUse: get("Uso de CFDI"),
-        fiscalRegime: get("Régimen fiscal"),
-        taxZipCode: get("Código postal fiscal"),
+        name: razonSocial,
+        cfdiUse: usoCfdi,
+        fiscalRegime: regimen,
+        taxZipCode: cp,
       },
       items,
     });
 
     if (!result.ok) return { error: `CFDI: ${result.error}` };
 
+    // Guarda el UUID Y los datos fiscales que se usaron (por si venían del form).
     const customAttributes = await mergeCustomAttributes(admin, id, {
       "CFDI UUID": result.uuid ?? "",
+      RFC: rfc,
+      "Razón social": razonSocial,
+      "Régimen fiscal": regimen,
+      "Uso de CFDI": usoCfdi,
+      "Código postal fiscal": cp,
     });
     await admin.graphql(
       `#graphql
@@ -766,7 +788,10 @@ export default function QuoteDetail() {
     );
 
   const generarCFDI = () =>
-    fetcher.submit({ intent: "generarCFDI" }, { method: "POST" });
+    fetcher.submit(
+      { intent: "generarCFDI", rfc, razonSocial, regimen, usoCfdi, cp },
+      { method: "POST" },
+    );
 
   const convertirEnPedido = () => {
     const ok = window.confirm(
