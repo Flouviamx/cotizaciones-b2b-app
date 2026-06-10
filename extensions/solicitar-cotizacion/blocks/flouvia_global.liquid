@@ -1,0 +1,351 @@
+{% comment %}
+  APP EMBED · "Cotizaciones Flouvia (global)" — se activa una sola vez desde
+  Tema → Personalizar → Incrustaciones de la app. Corre en TODA la tienda y, según
+  lo que el comerciante encienda, agrega:
+    · Botón flotante en una esquina
+    · Un botón en cada tarjeta de producto (abre cotización O agrega a la lista)
+    · Botón "Solicitar cotización del carrito" en la página /cart
+    · Carrito de cotización (lista propia) con pestaña/burbuja + panel lateral
+    · Botón "Agregar a cotización" en la página de producto
+  Todos abren el mismo modal compartido (assets/flouvia.js).
+
+  DISEÑO DEL PANEL:
+    · "Estilo general" define color/forma/tamaño UNA vez → todos los botones lo heredan.
+    · Cada botón tiene un check "Personalizar este botón" que revela sus colores propios.
+    · `visible_if` colapsa los campos de cada función cuando está apagada.
+{% endcomment %}
+
+{{ 'flouvia.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'flouvia.js' | asset_url }}" defer></script>
+
+{% liquid
+  assign s = block.settings
+
+  # ---- Tamaño global → padding de los botones (chico / mediano / grande) ----
+  case s.theme_size
+    when 'sm'
+      assign pad_y = 9
+      assign pad_x = 16
+      assign cpad_y = 5
+      assign cpad_x = 9
+    when 'lg'
+      assign pad_y = 17
+      assign pad_x = 28
+      assign cpad_y = 10
+      assign cpad_x = 16
+    else
+      assign pad_y = 13
+      assign pad_x = 22
+      assign cpad_y = 7
+      assign cpad_x = 12
+  endcase
+
+  # ---- Estilo efectivo del BOTÓN FLOTANTE (hereda del general salvo override) ----
+  if s.float_custom
+    assign float_bg = s.float_bg
+    assign float_color = s.float_color
+    assign float_radius = s.float_radius
+  else
+    assign float_bg = s.theme_accent
+    assign float_color = s.theme_text
+    assign float_radius = s.theme_radius
+  endif
+
+  # ---- Estilo efectivo del BOTÓN EN TARJETAS ----
+  if s.card_custom
+    assign card_bg = s.card_bg
+    assign card_color = s.card_color
+    assign card_radius = s.card_radius
+  else
+    assign card_bg = s.theme_accent
+    assign card_color = s.theme_text
+    assign card_radius = s.theme_radius
+  endif
+
+  # ---- Estilo efectivo del BOTÓN EN /cart ----
+  if s.cart_custom
+    assign cart_bg = s.cart_bg
+    assign cart_color = s.cart_color
+    assign cart_radius = s.cart_radius
+  else
+    assign cart_bg = s.theme_accent
+    assign cart_color = s.theme_text
+    assign cart_radius = s.theme_radius
+  endif
+
+  # ---- Estilo efectivo del DISPARADOR del carrito de cotización ----
+  if s.drawer_custom
+    assign drawer_bg = s.drawer_bg
+    assign drawer_color = s.drawer_color
+  else
+    assign drawer_bg = s.theme_accent
+    assign drawer_color = s.theme_text
+  endif
+
+  # ---- Estilo efectivo del BOTÓN "Agregar a cotización" (producto) ----
+  if s.add_custom
+    assign add_bg = s.add_bg
+    assign add_color = s.add_color
+    assign add_radius = s.add_radius
+  else
+    assign add_bg = s.theme_accent
+    assign add_color = s.theme_text
+    assign add_radius = s.theme_radius
+  endif
+
+  # ---- Acento del modal: hereda del general si el comerciante no lo cambió ----
+  assign modal_accent = s.accent_color
+  if s.accent_inherit
+    assign modal_accent = s.theme_accent
+  endif
+%}
+
+<script>
+  // Config del modal (si el app block ya la puso en una página de producto, no la pisamos).
+  window.FLOUVIA_CONFIG = window.FLOUVIA_CONFIG || {
+    title: {{ s.modal_title | json }},
+    success: {{ s.success_message | json }},
+    accent: {{ modal_accent | json }},
+    radius: {{ s.modal_radius | json }},
+    overlay: {{ s.overlay_dark | json }}
+  };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    if (!window.FlouviaQuote) return;
+    var THEME = {
+      weight: {{ s.theme_weight | json }},
+      shadow: {{ s.theme_shadow | json }},
+      padY: {{ pad_y | json }}, padX: {{ pad_x | json }},
+      cpadY: {{ cpad_y | json }}, cpadX: {{ cpad_x | json }}
+    };
+
+    {% if s.enable_float %}
+    window.FlouviaQuote.initFloating({
+      label: {{ s.float_label | json }},
+      icon: {{ s.float_icon | json }},
+      iconPos: {{ s.float_icon_pos | json }},
+      position: {{ s.float_position | json }},
+      hideMobile: {{ s.float_hide_mobile | json }},
+      bg: {{ float_bg | json }},
+      color: {{ float_color | json }},
+      radius: {{ float_radius | json }},
+      fontSize: {{ s.float_font_size | json }},
+      weight: THEME.weight, shadow: THEME.shadow,
+      paddingY: THEME.padY, paddingX: THEME.padX
+    });
+    {% endif %}
+
+    {% comment %} Un solo botón en la tarjeta; el comerciante elige qué hace. {% endcomment %}
+    {% if s.cards_action == 'quote' %}
+    window.FlouviaQuote.initCards({
+      label: {{ s.card_label | json }},
+      position: {{ s.card_position | json }},
+      selector: {{ s.card_selector | json }},
+      bg: {{ card_bg | json }},
+      color: {{ card_color | json }},
+      radius: {{ card_radius | json }},
+      fontSize: {{ s.card_font_size | json }},
+      weight: THEME.weight, paddingY: THEME.cpadY, paddingX: THEME.cpadX
+    });
+    {% elsif s.cards_action == 'add' %}
+    window.FlouviaQuote.initQuoteCards({
+      label: {{ s.card_label | json }},
+      position: {{ s.card_position | json }},
+      selector: {{ s.card_selector | json }},
+      bg: {{ card_bg | json }},
+      color: {{ card_color | json }},
+      radius: {{ card_radius | json }},
+      fontSize: {{ s.card_font_size | json }},
+      weight: THEME.weight, paddingY: THEME.cpadY, paddingX: THEME.cpadX
+    });
+    {% endif %}
+
+    {% if s.enable_cart %}
+    window.FlouviaQuote.initCartButton({
+      label: {{ s.cart_label | json }},
+      selector: {{ s.cart_selector | json }},
+      bg: {{ cart_bg | json }},
+      color: {{ cart_color | json }},
+      radius: {{ cart_radius | json }},
+      fullWidth: {{ s.cart_full_width | json }},
+      weight: THEME.weight, paddingY: THEME.padY, paddingX: THEME.padX
+    });
+    {% endif %}
+
+    {% if s.enable_drawer %}
+    window.FlouviaQuote.initDrawer({
+      label: {{ s.drawer_label | json }},
+      icon: {{ s.drawer_icon | json }},
+      title: {{ s.drawer_title | json }},
+      style: {{ s.drawer_style | json }},
+      side: {{ s.drawer_side | json }},
+      width: {{ s.drawer_width | json }},
+      bg: {{ drawer_bg | json }},
+      color: {{ drawer_color | json }},
+      accent: {{ modal_accent | json }},
+      hideWhenEmpty: {{ s.drawer_hide_empty | json }},
+      openOnAdd: {{ s.drawer_open_on_add | json }}
+    });
+    {% endif %}
+
+    {% if s.enable_product_add %}
+    window.FlouviaQuote.initProductAdd({
+      label: {{ s.add_label | json }},
+      selector: {{ s.add_selector | json }},
+      bg: {{ add_bg | json }},
+      color: {{ add_color | json }},
+      radius: {{ add_radius | json }},
+      fullWidth: {{ s.add_full_width | json }},
+      weight: THEME.weight, paddingY: THEME.padY, paddingX: THEME.padX
+    });
+    {% endif %}
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Cotizaciones Flouvia",
+  "target": "body",
+  "settings": [
+    { "type": "header", "content": "🎨 Estilo general" },
+    { "type": "color", "id": "theme_accent", "label": "Color principal", "info": "Defines color, forma y tamaño UNA sola vez; todos los botones lo heredan. Cada botón puede personalizarse aparte más abajo.", "default": "#1a73e8" },
+    { "type": "color", "id": "theme_text", "label": "Color del texto sobre los botones", "default": "#ffffff" },
+    { "type": "range", "id": "theme_radius", "label": "Redondeo de esquinas", "min": 0, "max": 40, "step": 1, "unit": "px", "default": 10 },
+    {
+      "type": "select", "id": "theme_size", "label": "Tamaño de los botones",
+      "options": [
+        { "value": "sm", "label": "Compacto" },
+        { "value": "md", "label": "Mediano" },
+        { "value": "lg", "label": "Grande" }
+      ],
+      "default": "md"
+    },
+    {
+      "type": "select", "id": "theme_weight", "label": "Grosor de la letra",
+      "options": [
+        { "value": "500", "label": "Normal" },
+        { "value": "600", "label": "Seminegrita" },
+        { "value": "700", "label": "Negrita" }
+      ],
+      "default": "700"
+    },
+    { "type": "checkbox", "id": "theme_shadow", "label": "Sombra en botones flotantes", "default": true },
+
+    { "type": "header", "content": "🟦 Botón flotante" },
+    { "type": "checkbox", "id": "enable_float", "label": "Mostrar botón flotante", "info": "Un botón fijo en una esquina, visible en toda la tienda. Abre el modal de cotización.", "default": false },
+    { "type": "text", "id": "float_label", "label": "Texto del botón", "default": "Solicitar cotización", "visible_if": "{{ block.settings.enable_float }}" },
+    { "type": "text", "id": "float_icon", "label": "Ícono (emoji, opcional)", "info": "Ej. 🧾 o 💬. Déjalo vacío si no quieres ícono.", "visible_if": "{{ block.settings.enable_float }}" },
+    {
+      "type": "select", "id": "float_icon_pos", "label": "Posición del ícono",
+      "options": [
+        { "value": "left", "label": "Antes del texto" },
+        { "value": "right", "label": "Después del texto" }
+      ],
+      "default": "left",
+      "visible_if": "{{ block.settings.enable_float }}"
+    },
+    {
+      "type": "select", "id": "float_position", "label": "Posición en la pantalla",
+      "options": [
+        { "value": "bottom-right", "label": "Abajo a la derecha" },
+        { "value": "bottom-left", "label": "Abajo a la izquierda" },
+        { "value": "top-right", "label": "Arriba a la derecha" },
+        { "value": "top-left", "label": "Arriba a la izquierda" }
+      ],
+      "default": "bottom-right",
+      "visible_if": "{{ block.settings.enable_float }}"
+    },
+    { "type": "checkbox", "id": "float_hide_mobile", "label": "Ocultar en celulares", "default": false, "visible_if": "{{ block.settings.enable_float }}" },
+    { "type": "range", "id": "float_font_size", "label": "Tamaño de letra", "min": 10, "max": 28, "step": 1, "unit": "px", "default": 15, "visible_if": "{{ block.settings.enable_float }}" },
+    { "type": "checkbox", "id": "float_custom", "label": "Personalizar colores y forma de este botón", "default": false, "visible_if": "{{ block.settings.enable_float }}" },
+    { "type": "color", "id": "float_bg", "label": "Fondo", "default": "#1a73e8", "visible_if": "{{ block.settings.enable_float and block.settings.float_custom }}" },
+    { "type": "color", "id": "float_color", "label": "Color del texto", "default": "#ffffff", "visible_if": "{{ block.settings.enable_float and block.settings.float_custom }}" },
+    { "type": "range", "id": "float_radius", "label": "Redondeo de esquinas", "min": 0, "max": 40, "step": 1, "unit": "px", "default": 40, "visible_if": "{{ block.settings.enable_float and block.settings.float_custom }}" },
+
+    { "type": "header", "content": "🏷️ Botón en tarjetas de producto" },
+    {
+      "type": "select", "id": "cards_action", "label": "¿Qué hace el botón de la tarjeta?",
+      "info": "Inyecta UN botón en cada tarjeta de carruseles y grids. Si tu tema no es estándar y no aparece, pega el selector CSS abajo.",
+      "options": [
+        { "value": "none", "label": "No mostrar botón" },
+        { "value": "quote", "label": "Abrir cotización (con ese producto)" },
+        { "value": "add", "label": "Agregar al carrito de cotización" }
+      ],
+      "default": "none"
+    },
+    { "type": "text", "id": "card_label", "label": "Texto del botón", "default": "Cotizar", "visible_if": "{{ block.settings.cards_action != 'none' }}" },
+    {
+      "type": "select", "id": "card_position", "label": "Posición dentro de la tarjeta",
+      "options": [
+        { "value": "below", "label": "Debajo de la tarjeta" },
+        { "value": "overlay", "label": "Sobre la imagen" }
+      ],
+      "default": "below",
+      "visible_if": "{{ block.settings.cards_action != 'none' }}"
+    },
+    { "type": "text", "id": "card_selector", "label": "Selector CSS de la tarjeta (opcional)", "info": "Solo si tu tema no es estándar. Ej. .product-grid-item", "visible_if": "{{ block.settings.cards_action != 'none' }}" },
+    { "type": "range", "id": "card_font_size", "label": "Tamaño de letra", "min": 9, "max": 20, "step": 1, "unit": "px", "default": 13, "visible_if": "{{ block.settings.cards_action != 'none' }}" },
+    { "type": "checkbox", "id": "card_custom", "label": "Personalizar colores y forma de este botón", "default": false, "visible_if": "{{ block.settings.cards_action != 'none' }}" },
+    { "type": "color", "id": "card_bg", "label": "Fondo", "default": "#1a73e8", "visible_if": "{{ block.settings.cards_action != 'none' and block.settings.card_custom }}" },
+    { "type": "color", "id": "card_color", "label": "Color del texto", "default": "#ffffff", "visible_if": "{{ block.settings.cards_action != 'none' and block.settings.card_custom }}" },
+    { "type": "range", "id": "card_radius", "label": "Redondeo de esquinas", "min": 0, "max": 40, "step": 1, "unit": "px", "default": 8, "visible_if": "{{ block.settings.cards_action != 'none' and block.settings.card_custom }}" },
+
+    { "type": "header", "content": "🛒 Botón en la página de carrito" },
+    { "type": "checkbox", "id": "enable_cart", "label": "Mostrar botón en la página de carrito", "info": "Agrega un botón para cotizar todo el carrito en la página /cart.", "default": false },
+    { "type": "text", "id": "cart_label", "label": "Texto del botón", "default": "Solicitar cotización del carrito", "visible_if": "{{ block.settings.enable_cart }}" },
+    { "type": "text", "id": "cart_selector", "label": "Selector CSS donde insertarlo (opcional)", "info": "Solo si tu tema no es estándar. Ej. .cart__footer", "visible_if": "{{ block.settings.enable_cart }}" },
+    { "type": "checkbox", "id": "cart_full_width", "label": "Ancho completo", "default": true, "visible_if": "{{ block.settings.enable_cart }}" },
+    { "type": "checkbox", "id": "cart_custom", "label": "Personalizar colores y forma de este botón", "default": false, "visible_if": "{{ block.settings.enable_cart }}" },
+    { "type": "color", "id": "cart_bg", "label": "Fondo", "default": "#1a73e8", "visible_if": "{{ block.settings.enable_cart and block.settings.cart_custom }}" },
+    { "type": "color", "id": "cart_color", "label": "Color del texto", "default": "#ffffff", "visible_if": "{{ block.settings.enable_cart and block.settings.cart_custom }}" },
+    { "type": "range", "id": "cart_radius", "label": "Redondeo de esquinas", "min": 0, "max": 40, "step": 1, "unit": "px", "default": 8, "visible_if": "{{ block.settings.enable_cart and block.settings.cart_custom }}" },
+
+    { "type": "header", "content": "📋 Carrito de cotización (lista + panel)" },
+    { "type": "checkbox", "id": "enable_drawer", "label": "Activar carrito de cotización + pestaña", "info": "Una lista de cotización propia (separada del carrito normal). El cliente agrega productos, los ve en un panel lateral y al final los envía. La lista se guarda en su navegador.", "default": false },
+    { "type": "text", "id": "drawer_label", "label": "Texto de la pestaña/botón", "default": "Cotización", "visible_if": "{{ block.settings.enable_drawer }}" },
+    { "type": "text", "id": "drawer_icon", "label": "Ícono (emoji)", "default": "🧾", "visible_if": "{{ block.settings.enable_drawer }}" },
+    { "type": "text", "id": "drawer_title", "label": "Título del panel", "default": "Mi cotización", "visible_if": "{{ block.settings.enable_drawer }}" },
+    {
+      "type": "select", "id": "drawer_style", "label": "Estilo del disparador",
+      "options": [
+        { "value": "tab", "label": "Pestaña pegada al borde" },
+        { "value": "bubble", "label": "Burbuja flotante (esquina)" }
+      ],
+      "default": "tab",
+      "visible_if": "{{ block.settings.enable_drawer }}"
+    },
+    {
+      "type": "select", "id": "drawer_side", "label": "Lado de la pantalla",
+      "options": [
+        { "value": "right", "label": "Derecha" },
+        { "value": "left", "label": "Izquierda" }
+      ],
+      "default": "right",
+      "visible_if": "{{ block.settings.enable_drawer }}"
+    },
+    { "type": "range", "id": "drawer_width", "label": "Ancho del panel", "min": 320, "max": 560, "step": 10, "unit": "px", "default": 400, "visible_if": "{{ block.settings.enable_drawer }}" },
+    { "type": "checkbox", "id": "drawer_hide_empty", "label": "Ocultar la pestaña cuando la lista esté vacía", "default": false, "visible_if": "{{ block.settings.enable_drawer }}" },
+    { "type": "checkbox", "id": "drawer_open_on_add", "label": "Abrir el panel automáticamente al agregar un producto", "default": true, "visible_if": "{{ block.settings.enable_drawer }}" },
+    { "type": "checkbox", "id": "drawer_custom", "label": "Personalizar colores del disparador", "default": false, "visible_if": "{{ block.settings.enable_drawer }}" },
+    { "type": "color", "id": "drawer_bg", "label": "Fondo del disparador", "default": "#1a73e8", "visible_if": "{{ block.settings.enable_drawer and block.settings.drawer_custom }}" },
+    { "type": "color", "id": "drawer_color", "label": "Color del texto del disparador", "default": "#ffffff", "visible_if": "{{ block.settings.enable_drawer and block.settings.drawer_custom }}" },
+
+    { "type": "checkbox", "id": "enable_product_add", "label": "Botón \"Agregar a cotización\" en la página de producto", "info": "Funciona con el carrito de cotización de arriba. Agrega el producto (con la variante elegida) a la lista.", "default": false },
+    { "type": "text", "id": "add_label", "label": "Texto del botón", "default": "Agregar a cotización", "visible_if": "{{ block.settings.enable_product_add }}" },
+    { "type": "text", "id": "add_selector", "label": "Selector CSS del formulario (opcional)", "info": "Solo si tu tema no es estándar. Ej. form.product-form", "visible_if": "{{ block.settings.enable_product_add }}" },
+    { "type": "checkbox", "id": "add_full_width", "label": "Ancho completo", "default": true, "visible_if": "{{ block.settings.enable_product_add }}" },
+    { "type": "checkbox", "id": "add_custom", "label": "Personalizar colores y forma de este botón", "default": false, "visible_if": "{{ block.settings.enable_product_add }}" },
+    { "type": "color", "id": "add_bg", "label": "Fondo", "default": "#1a73e8", "visible_if": "{{ block.settings.enable_product_add and block.settings.add_custom }}" },
+    { "type": "color", "id": "add_color", "label": "Color del texto", "default": "#ffffff", "visible_if": "{{ block.settings.enable_product_add and block.settings.add_custom }}" },
+    { "type": "range", "id": "add_radius", "label": "Redondeo de esquinas", "min": 0, "max": 40, "step": 1, "unit": "px", "default": 8, "visible_if": "{{ block.settings.enable_product_add and block.settings.add_custom }}" },
+
+    { "type": "header", "content": "🪟 Ventana (modal)" },
+    { "type": "text", "id": "modal_title", "label": "Título de la ventana", "default": "Solicitar cotización" },
+    { "type": "text", "id": "success_message", "label": "Mensaje de éxito", "default": "El vendedor revisará tu solicitud y te contactará con la cotización y el link de pago." },
+    { "type": "checkbox", "id": "accent_inherit", "label": "Usar el color principal en la ventana", "info": "Apágalo si quieres un color de acento distinto solo para la ventana.", "default": true },
+    { "type": "color", "id": "accent_color", "label": "Color de acento de la ventana", "default": "#1a73e8", "visible_if": "{{ block.settings.accent_inherit == false }}" },
+    { "type": "range", "id": "modal_radius", "label": "Redondeo de la ventana", "min": 0, "max": 28, "step": 1, "unit": "px", "default": 20 },
+    { "type": "range", "id": "overlay_dark", "label": "Oscurecer el fondo", "min": 0, "max": 90, "step": 5, "unit": "%", "default": 55 }
+  ]
+}
+{% endschema %}

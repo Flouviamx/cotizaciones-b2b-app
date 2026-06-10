@@ -1,0 +1,247 @@
+/* =========================================================================
+   Flouvia · Cotizaciones — estilos compartidos
+   Cargado una sola vez. Cubre: modal, botón disparador, botón flotante,
+   botón inyectado en tarjetas de producto y botón del carrito.
+   ========================================================================= */
+
+/* ---------- Botón disparador (página de producto / sección) ---------- */
+.flouvia-trigger { transition: opacity .15s, transform .15s; }
+.flouvia-trigger:hover { opacity: .92; transform: translateY(-1px); }
+
+/* ---------- Botón flotante (esquina, toda la tienda) ---------- */
+.flouvia-float {
+  position: fixed; z-index: 2147482000; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 0; font-family: inherit; font-weight: 700; line-height: 1;
+  box-shadow: 0 12px 30px -8px rgba(0,0,0,.45);
+  transition: transform .15s, box-shadow .15s, opacity .15s;
+}
+.flouvia-float:hover { transform: translateY(-2px); box-shadow: 0 16px 36px -8px rgba(0,0,0,.5); }
+.flouvia-float.no-shadow { box-shadow: none; }
+.flouvia-float.no-shadow:hover { box-shadow: none; }
+.flouvia-float[data-pos="bottom-right"] { right: 18px; bottom: 18px; }
+.flouvia-float[data-pos="bottom-left"]  { left: 18px;  bottom: 18px; }
+.flouvia-float[data-pos="top-right"]    { right: 18px; top: 18px; }
+.flouvia-float[data-pos="top-left"]     { left: 18px;  top: 18px; }
+.flouvia-float .flouvia-float-ic { font-size: 1.1em; }
+
+/* ---------- Botón inyectado en tarjetas de producto ---------- */
+.flouvia-card-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; box-sizing: border-box; margin-top: 8px;
+  border: 0; cursor: pointer; font-family: inherit; font-weight: 600; line-height: 1.2;
+  transition: opacity .15s, transform .15s;
+}
+.flouvia-card-btn:hover { opacity: .9; transform: translateY(-1px); }
+/* Variante superpuesta sobre la imagen (posición flotante dentro de la tarjeta) */
+.flouvia-card-host { position: relative; }
+.flouvia-card-btn--overlay {
+  position: absolute; left: 8px; right: 8px; bottom: 8px; width: auto; margin: 0;
+  z-index: 2; box-shadow: 0 6px 16px -6px rgba(0,0,0,.4);
+}
+
+/* ---------- Botón en la página de carrito ---------- */
+.flouvia-cart-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 0; cursor: pointer; font-family: inherit; font-weight: 700; line-height: 1.2;
+  margin: 12px 0; transition: opacity .15s, transform .15s;
+}
+.flouvia-cart-btn:hover { opacity: .92; transform: translateY(-1px); }
+
+/* ========================== MODAL ========================== */
+.flouvia-overlay { position: fixed; inset: 0; z-index: 2147483000; display: none;
+  align-items: center; justify-content: center; padding: 16px;
+  background: rgba(15, 23, 42, .55); backdrop-filter: blur(3px); }
+.flouvia-overlay.open { display: flex; }
+.flouvia-modal { --fq-accent: #1a73e8; --fq-radius: 20px; width: 100%; max-width: 560px; max-height: 92vh;
+  display: flex; flex-direction: column; background: #fff; border-radius: var(--fq-radius); overflow: hidden;
+  box-shadow: 0 30px 70px -20px rgba(0,0,0,.5); color: #1a1a2e;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  animation: flouvia-pop .22s cubic-bezier(.2,.9,.3,1); }
+@keyframes flouvia-pop { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+
+.flouvia-head { display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px; background: linear-gradient(135deg, var(--fq-accent), #4285f4); color: #fff; }
+.flouvia-head-t { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; }
+.flouvia-head-ic { font-size: 20px; }
+.flouvia-x { background: rgba(255,255,255,.18); border: 0; color: #fff; width: 32px; height: 32px;
+  border-radius: 999px; font-size: 22px; line-height: 1; cursor: pointer; transition: background .15s; }
+.flouvia-x:hover { background: rgba(255,255,255,.32); }
+
+.flouvia-stepper { display: flex; align-items: center; padding: 16px 22px 4px; }
+.flouvia-step-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.flouvia-step-n { width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center;
+  justify-content: center; font-size: 14px; font-weight: 800; background: #eef0f4; color: #9099a8;
+  transition: all .2s; }
+.flouvia-step-l { font-size: 11.5px; font-weight: 700; color: #9099a8; transition: color .2s; }
+.flouvia-step-item.active .flouvia-step-n { background: linear-gradient(135deg, var(--fq-accent), #4285f4); color: #fff; }
+.flouvia-step-item.active .flouvia-step-l { color: #1a56c4; }
+.flouvia-step-item.done .flouvia-step-n { background: #dcfce7; color: #15803d; }
+.flouvia-step-bar { flex: 1; height: 3px; background: #eef0f4; border-radius: 999px; margin: 0 8px 18px; overflow: hidden; }
+.flouvia-step-bar span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--fq-accent), #4285f4); transition: width .3s; }
+
+.flouvia-body { padding: 8px 22px 4px; overflow-y: auto; flex: 1; }
+.flouvia-lead { font-size: 14px; color: #374151; margin: 4px 0 16px; line-height: 1.5; }
+.flouvia-muted { color: #9099a8; font-size: 12.5px; }
+
+/* Productos */
+.flouvia-products { display: flex; flex-direction: column; gap: 10px; }
+.flouvia-prow { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid #ececf0;
+  border-radius: 14px; }
+.flouvia-pimg { flex: 0 0 52px; width: 52px; height: 52px; border-radius: 10px; object-fit: cover;
+  background: #f1f1f4; }
+.flouvia-pinfo { flex: 1; min-width: 0; }
+.flouvia-pname { font-size: 13.5px; font-weight: 700; line-height: 1.35; }
+.flouvia-pvar { font-size: 12px; color: #9099a8; margin-top: 1px; }
+.flouvia-pprice { font-size: 12.5px; color: #6b7280; font-weight: 600; margin-top: 2px; }
+.flouvia-qty { display: flex; align-items: center; gap: 0; border: 1px solid #d8d8e0; border-radius: 10px; overflow: hidden; }
+.flouvia-qty button { width: 30px; height: 32px; border: 0; background: #f7f8fa; font-size: 17px; cursor: pointer; color: #374151; }
+.flouvia-qty button:hover { background: #eef3ff; color: var(--fq-accent); }
+.flouvia-qty input { width: 40px; height: 32px; border: 0; text-align: center; font-size: 14px; font-weight: 700; -moz-appearance: textfield; }
+.flouvia-qty input::-webkit-outer-spin-button, .flouvia-qty input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.flouvia-remove { background: none; border: 0; color: #c0c4cc; cursor: pointer; font-size: 18px; padding: 4px; transition: color .15s; }
+.flouvia-remove:hover { color: #ef4444; }
+
+.flouvia-empty { text-align: center; padding: 30px 16px; }
+.flouvia-empty-ic { font-size: 36px; margin-bottom: 8px; }
+.flouvia-empty-t { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
+.flouvia-empty-d { font-size: 13px; color: #6b7280; line-height: 1.5; max-width: 320px; margin: 0 auto; }
+
+/* Formulario */
+.flouvia-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.flouvia-full { grid-column: 1 / -1; }
+.flouvia-field { display: flex; flex-direction: column; }
+.flouvia-label { font-size: 12.5px; font-weight: 700; color: #374151; margin-bottom: 6px; }
+.flouvia-req { color: #ef4444; }
+.flouvia-input { width: 100%; padding: 10px 12px; border: 1px solid #d8d8e0; border-radius: 10px;
+  font-size: 14px; font-family: inherit; color: #1a1a2e; background: #fff; outline: none; box-sizing: border-box; }
+.flouvia-input:focus { border-color: var(--fq-accent); box-shadow: 0 0 0 3px rgba(26,115,232,.15); }
+.flouvia-input.bad { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.12); }
+textarea.flouvia-input { resize: vertical; min-height: 64px; }
+.flouvia-err { font-size: 12px; font-weight: 600; color: #dc2626; margin-top: 5px; min-height: 0; }
+.flouvia-pro { display: none; } /* visible solo si la tienda es Pro */
+.flouvia-modal.is-pro .flouvia-pro { display: flex; }
+
+/* Revisar */
+.flouvia-review-card { border: 1px solid #ececf0; border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; }
+.flouvia-review-h { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+  color: #9099a8; margin-bottom: 10px; }
+.flouvia-review-products { display: flex; flex-direction: column; gap: 7px; }
+.flouvia-rrow { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; }
+.flouvia-rrow .q { color: #6b7280; font-weight: 700; }
+.flouvia-review-contact { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13.5px; }
+.flouvia-review-contact .k { color: #9099a8; font-weight: 700; }
+.flouvia-review-contact .v { color: #1a1a2e; word-break: break-word; }
+
+/* Pie */
+.flouvia-foot { padding: 14px 22px 20px; border-top: 1px solid #f1f1f4; }
+.flouvia-msg { font-size: 13px; margin: 0 0 10px; min-height: 0; color: #6b7280; }
+.flouvia-msg.bad { color: #dc2626; font-weight: 600; }
+.flouvia-msg.ok { color: #15803d; font-weight: 600; }
+.flouvia-foot-btns { display: flex; gap: 10px; justify-content: flex-end; }
+.flouvia-btn { border: 0; border-radius: 11px; padding: 11px 20px; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: opacity .15s, background .15s; font-family: inherit; }
+.flouvia-btn.primary { background: linear-gradient(135deg, var(--fq-accent), #4285f4); color: #fff; }
+.flouvia-btn.primary:hover { opacity: .92; }
+.flouvia-btn.primary:disabled { opacity: .5; cursor: not-allowed; }
+.flouvia-btn.ghost { background: #fff; border: 1.5px solid #d8d8e0; color: #374151; }
+.flouvia-btn.ghost:hover { border-color: var(--fq-accent); color: #1a56c4; }
+
+/* Marca (Plan Gratis) */
+.flouvia-brand { text-align: center; padding: 4px 0 2px; font-size: 11.5px; color: #9099a8; }
+.flouvia-brand strong { color: var(--fq-accent); font-weight: 800; }
+
+/* Éxito */
+.flouvia-success { text-align: center; padding: 30px 20px; }
+.flouvia-success-ic { width: 64px; height: 64px; border-radius: 999px; background: #dcfce7; color: #15803d;
+  display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 16px;
+  animation: flouvia-pop .3s cubic-bezier(.2,.9,.3,1); }
+.flouvia-success-t { font-size: 19px; font-weight: 800; margin-bottom: 6px; }
+.flouvia-success-d { font-size: 14px; color: #6b7280; line-height: 1.5; max-width: 340px; margin: 0 auto; }
+
+@media (max-width: 560px) {
+  .flouvia-grid { grid-template-columns: 1fr; }
+  .flouvia-modal { max-height: 96vh; }
+  .flouvia-step-l { display: none; }
+}
+@media (max-width: 749px) {
+  .flouvia-hide-mobile { display: none !important; }
+}
+
+/* ===================== CARRITO DE COTIZACIÓN ===================== */
+
+/* ---------- Botón / pestaña disparador ---------- */
+.flouvia-qtoggle {
+  position: fixed; z-index: 2147482000; cursor: pointer; border: 0;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: inherit; font-weight: 700; line-height: 1; font-size: 14px;
+  box-shadow: 0 12px 30px -8px rgba(0,0,0,.45);
+  transition: transform .15s, box-shadow .15s, opacity .15s;
+}
+.flouvia-qtoggle:hover { transform: translateY(-1px); box-shadow: 0 16px 36px -8px rgba(0,0,0,.5); }
+.flouvia-qtoggle-ic { font-size: 1.15em; }
+.flouvia-qtoggle-badge {
+  min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; box-sizing: border-box;
+  background: #fff; color: #1a1a2e; font-size: 12px; font-weight: 800;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+/* Estilo "burbuja": pastilla flotante en una esquina inferior */
+.flouvia-qtoggle[data-style="bubble"] { bottom: 18px; padding: 13px 18px; border-radius: 999px; }
+.flouvia-qtoggle[data-style="bubble"][data-side="right"] { right: 18px; }
+.flouvia-qtoggle[data-style="bubble"][data-side="left"]  { left: 18px; }
+/* Estilo "pestaña": pegada al borde, a media altura, texto vertical */
+.flouvia-qtoggle[data-style="tab"] {
+  top: 50%; flex-direction: column; gap: 6px; padding: 14px 9px;
+  writing-mode: vertical-rl;
+}
+.flouvia-qtoggle[data-style="tab"] .flouvia-qtoggle-ic,
+.flouvia-qtoggle[data-style="tab"] .flouvia-qtoggle-badge { writing-mode: horizontal-tb; }
+.flouvia-qtoggle[data-style="tab"][data-side="right"] { right: 0; transform: translateY(-50%); border-radius: 12px 0 0 12px; }
+.flouvia-qtoggle[data-style="tab"][data-side="left"]  { left: 0;  transform: translateY(-50%); border-radius: 0 12px 12px 0; }
+.flouvia-qtoggle[data-style="tab"][data-side="right"]:hover { transform: translateY(-50%) translateX(-2px); }
+.flouvia-qtoggle[data-style="tab"][data-side="left"]:hover  { transform: translateY(-50%) translateX(2px); }
+
+/* ---------- Panel deslizante (drawer) ---------- */
+.flouvia-drawer-ov {
+  position: fixed; inset: 0; z-index: 2147482600; display: none;
+  background: rgba(15, 23, 42, .5); backdrop-filter: blur(2px);
+}
+.flouvia-drawer-ov.open { display: block; }
+.flouvia-drawer {
+  --fq-accent: #1a73e8;
+  position: absolute; top: 0; right: 0; height: 100%; width: 100%; max-width: 400px;
+  display: flex; flex-direction: column; background: #fff; color: #1a1a2e;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  box-shadow: -20px 0 60px -20px rgba(0,0,0,.5);
+  animation: flouvia-slide-in .26s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes flouvia-slide-in { from { transform: translateX(100%); } to { transform: none; } }
+.flouvia-drawer-head {
+  display: flex; align-items: center; justify-content: space-between; padding: 16px 18px;
+  background: linear-gradient(135deg, var(--fq-accent), #4285f4); color: #fff;
+}
+.flouvia-drawer-ttl { display: flex; align-items: center; gap: 9px; font-size: 16px; font-weight: 800; }
+.flouvia-drawer-ic { font-size: 19px; }
+.flouvia-drawer-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.flouvia-drawer-foot { border-top: 1px solid #f1f1f4; padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.flouvia-drawer-count { font-size: 13px; font-weight: 700; color: #6b7280; }
+.flouvia-drawer-req { width: 100%; }
+.flouvia-drawer-clear {
+  background: none; border: 0; color: #9099a8; font-family: inherit; font-size: 12.5px; font-weight: 600;
+  cursor: pointer; padding: 2px; text-decoration: underline; align-self: center;
+}
+.flouvia-drawer-clear:hover { color: #ef4444; }
+
+/* ---------- Botón "Agregar a cotización" (página de producto) ---------- */
+.flouvia-add-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  box-sizing: border-box; margin-top: 10px; padding: 12px 22px;
+  border: 0; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 15px; line-height: 1.2;
+  border-radius: 8px; transition: opacity .15s, transform .15s;
+}
+.flouvia-add-btn:hover { opacity: .92; transform: translateY(-1px); }
+.flouvia-add-btn.flouvia-added, .flouvia-qcard-btn.flouvia-added { background: #15803d !important; }
+
+@media (max-width: 480px) {
+  .flouvia-drawer { max-width: 100%; }
+}

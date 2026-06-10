@@ -1,0 +1,149 @@
+{% comment %}
+  APP BLOCK · "Solicitar cotización" (se arrastra a una sección — típicamente la página de producto).
+  El botón abre el modal compartido (assets/flouvia.js). Si el carrito está vacío y estamos en
+  una página de producto, precarga ese producto para que funcione la tienda "solo cotización".
+{% endcomment %}
+
+{{ 'flouvia.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'flouvia.js' | asset_url }}" defer></script>
+
+{% comment %} Configuración del modal (la primera instancia en la página gana). {% endcomment %}
+<script>
+  window.FLOUVIA_CONFIG = window.FLOUVIA_CONFIG || {
+    title: {{ block.settings.modal_title | json }},
+    success: {{ block.settings.success_message | json }},
+    accent: {{ block.settings.accent_color | json }}
+  };
+</script>
+
+{% assign fq = block.settings %}
+{%- if fq.alignment == 'center' -%}{% assign fq_align = 'center' %}
+{%- elsif fq.alignment == 'right' -%}{% assign fq_align = 'flex-end' %}
+{%- else -%}{% assign fq_align = 'flex-start' %}{%- endif -%}
+{%- assign uid = block.id -%}
+
+{% comment %} Tienda "solo cotización": ocultar precio y/o botón de carrito (CSS del servidor, sin parpadeo). {% endcomment %}
+{%- if fq.hide_price -%}
+  <style>
+    .price, .product__price, .price__container,
+    .price-item--regular, .price-item--sale,
+    [data-product-price] { display: none !important; }
+  </style>
+  {%- if fq.hide_price_selector != blank -%}
+    <style>{{ fq.hide_price_selector }} { display: none !important; }</style>
+  {%- endif -%}
+{%- endif -%}
+{%- if fq.hide_cart_button -%}
+  <style>
+    .product-form__buttons, .product-form__submit, .shopify-payment-button,
+    button[name="add"], [name="add"], [data-add-to-cart] { display: none !important; }
+  </style>
+  {%- if fq.hide_cart_selector != blank -%}
+    <style>{{ fq.hide_cart_selector }} { display: none !important; }</style>
+  {%- endif -%}
+{%- endif -%}
+
+<div
+  id="flouvia-root-{{ uid }}"
+  class="flouvia-quote {{ fq.custom_class }}"
+  style="display:flex; flex-direction:column; align-items:{{ fq_align }};"
+  {{ block.shopify_attributes }}
+>
+  {%- if product -%}
+    {% comment %} Producto actual → permite cotizar aunque el carrito esté vacío. {% endcomment %}
+    <script type="application/json" data-flouvia-product>
+      {
+        "title": {{ product.title | json }},
+        "featured_image": {% if product.featured_image %}{{ product.featured_image | image_url: width: 200 | json }}{% else %}null{% endif %},
+        "selected": {{ product.selected_or_first_available_variant.id | json }},
+        "variants": [
+          {%- for v in product.variants -%}
+            {
+              "id": {{ v.id | json }},
+              "title": {{ v.title | json }},
+              "price": {{ v.price | json }},
+              "available": {{ v.available | json }},
+              "image": {% if v.image %}{{ v.image | image_url: width: 200 | json }}{% else %}null{% endif %}
+            }{%- unless forloop.last -%},{%- endunless -%}
+          {%- endfor -%}
+        ]
+      }
+    </script>
+  {%- endif -%}
+
+  <button
+    type="button"
+    class="flouvia-trigger"
+    data-flouvia-open="cart"
+    style="
+      background:{{ fq.button_bg }};
+      color:{{ fq.button_text_color }};
+      border:{{ fq.border_width }}px solid {{ fq.border_color }};
+      border-radius:{{ fq.button_radius }}px;
+      padding:{{ fq.padding_y }}px {{ fq.padding_x }}px;
+      font-size:{{ fq.font_size }}px;
+      font-weight:{{ fq.font_weight }};
+      letter-spacing:{{ fq.letter_spacing }}px;
+      cursor:pointer;
+      {% if fq.full_width %}width:100%;{% endif %}
+    "
+  >
+    {{ fq.button_text }}
+  </button>
+</div>
+
+{% schema %}
+{
+  "name": "Solicitar cotización",
+  "target": "section",
+  "settings": [
+    { "type": "header", "content": "Texto" },
+    { "type": "text", "id": "button_text", "label": "Texto del botón", "default": "Solicitar cotización" },
+    { "type": "text", "id": "modal_title", "label": "Título de la ventana", "default": "Solicitar cotización" },
+    { "type": "text", "id": "success_message", "label": "Mensaje de éxito", "default": "El vendedor revisará tu solicitud y te contactará con la cotización y el link de pago." },
+
+    { "type": "header", "content": "Colores" },
+    { "type": "color", "id": "button_bg", "label": "Fondo del botón", "default": "#1a73e8" },
+    { "type": "color", "id": "button_text_color", "label": "Color del texto del botón", "default": "#ffffff" },
+    { "type": "color", "id": "border_color", "label": "Color del borde del botón", "default": "#1a73e8" },
+    { "type": "color", "id": "accent_color", "label": "Color de acento de la ventana", "default": "#1a73e8" },
+
+    { "type": "header", "content": "Forma y tamaño del botón" },
+    { "type": "range", "id": "font_size", "label": "Tamaño de letra", "min": 10, "max": 28, "step": 1, "unit": "px", "default": 15 },
+    {
+      "type": "select", "id": "font_weight", "label": "Grosor de letra",
+      "options": [
+        { "value": "400", "label": "Normal" },
+        { "value": "600", "label": "Seminegrita" },
+        { "value": "700", "label": "Negrita" }
+      ],
+      "default": "600"
+    },
+    { "type": "range", "id": "letter_spacing", "label": "Espaciado entre letras", "min": 0, "max": 4, "step": 1, "unit": "px", "default": 0 },
+    { "type": "range", "id": "button_radius", "label": "Redondeo de esquinas", "min": 0, "max": 40, "step": 1, "unit": "px", "default": 8 },
+    { "type": "range", "id": "padding_y", "label": "Alto (padding vertical)", "min": 4, "max": 30, "step": 1, "unit": "px", "default": 12 },
+    { "type": "range", "id": "padding_x", "label": "Ancho (padding horizontal)", "min": 8, "max": 60, "step": 1, "unit": "px", "default": 22 },
+    { "type": "range", "id": "border_width", "label": "Grosor del borde", "min": 0, "max": 6, "step": 1, "unit": "px", "default": 0 },
+    { "type": "checkbox", "id": "full_width", "label": "Botón de ancho completo", "default": false },
+    {
+      "type": "select", "id": "alignment", "label": "Alineación",
+      "options": [
+        { "value": "left", "label": "Izquierda" },
+        { "value": "center", "label": "Centro" },
+        { "value": "right", "label": "Derecha" }
+      ],
+      "default": "left"
+    },
+
+    { "type": "header", "content": "Tienda solo cotización" },
+    { "type": "paragraph", "content": "Oculta el precio y el botón de carrito de la página de producto para que el cliente solo pueda solicitar cotización. Disponible en ambos planes." },
+    { "type": "checkbox", "id": "hide_price", "label": "Ocultar el precio del producto", "default": false },
+    { "type": "checkbox", "id": "hide_cart_button", "label": "Ocultar \"Añadir al carrito\" y pago rápido", "default": false },
+    { "type": "text", "id": "hide_price_selector", "label": "Selector CSS del precio (opcional)", "info": "Solo si tu tema no es estándar y el precio sigue visible. Ej. .mi-tema-precio" },
+    { "type": "text", "id": "hide_cart_selector", "label": "Selector CSS del botón de carrito (opcional)", "info": "Solo si el botón de carrito sigue visible. Ej. .mi-tema-add" },
+
+    { "type": "header", "content": "Avanzado" },
+    { "type": "text", "id": "custom_class", "label": "Clase CSS extra (para estilos propios)" }
+  ]
+}
+{% endschema %}
