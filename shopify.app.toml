@@ -58,4 +58,7 @@ prefix = "apps"
 redirect_urls = [ "https://cotizaciones-b2b-app.vercel.app/api/auth" ]
 
 [build]
-automatically_update_urls_on_dev = true
+# false para que `shopify app dev` NO sobrescriba la URL de producción (Vercel)
+# con el túnel temporal. Si necesitas probar el storefront con túnel, ponlo true
+# temporalmente y vuélvelo a false antes de desplegar.
+automatically_update_urls_on_dev = false
