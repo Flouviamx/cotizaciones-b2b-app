@@ -18,7 +18,7 @@ Portal B2B para gestionar cotizaciones con precios negociados y CFDI en México.
 
 ## App details (max 500 caracteres)
 # Sin links, sin formato, sin jerga, sin estadísticas
-¿Tus pedidos B2B llegan por WhatsApp y los capturas en Excel? Flouvia digitaliza ese proceso dentro de Shopify. Tus compradores solicitan cotizaciones desde el carrito, la página de producto o un botón flotante; tú negocias precios producto por producto, envías el link de pago o un PDF con tu marca, y conviertes la cotización en pedido con un clic. Incluye términos de crédito (Contado, Net 30, Net 60), descuentos, empresas con crédito, analítica y facturación CFDI para México en el Plan Pro.
+¿Tus pedidos B2B llegan por WhatsApp y los capturas en Excel? Flouvia digitaliza ese proceso dentro de Shopify. Tus compradores solicitan cotizaciones desde el carrito, la página de producto o un botón flotante; tú negocias precios producto por producto y envías el link de pago o un PDF con tu marca; tu cliente paga de forma segura en el checkout de Shopify. Incluye términos de crédito (Contado, Net 30, Net 60), descuentos, empresas con crédito, analítica y facturación CFDI para México en el Plan Pro.
 
 ---
 
@@ -31,7 +31,7 @@ Feature 2:
 Negocia precios por producto, aplica descuentos y manda link de pago o PDF
 
 Feature 3:
-Convierte la cotización en pedido de Shopify con un solo clic
+Envía el link de pago y el cliente paga seguro en el checkout de Shopify
 
 Feature 4:
 Empresas con límite de crédito, términos Net 30/60 y analítica B2B
@@ -85,7 +85,7 @@ https://flouvia.com/privacidad
 ## Pricing (copia cada plan)
 
 Plan Gratis — $0.00 USD
-Descripción: Hasta 5 cotizaciones activas. Botón "Solicitar cotización" en carrito, producto y flotante, precios negociados por producto, descuentos, link de pago, PDF descargable, convertir cotización en pedido con un clic y modo "solo cotización" (oculta precios y carrito). Incluye la marca "Cotizaciones por Flouvia" en la ventana del cliente. Ideal para empezar sin costo.
+Descripción: Hasta 5 cotizaciones activas. Botón "Solicitar cotización" en carrito, producto y flotante, precios negociados por producto, descuentos, link de pago (checkout de Shopify), PDF descargable y modo "solo cotización" (oculta precios y carrito). Incluye la marca "Cotizaciones por Flouvia" en la ventana del cliente. Ideal para empezar sin costo.
 
 Plan Básico Mensual — $29.00 USD / mes
 Descripción: Cotizaciones ilimitadas (sin la marca Flouvia), correos automáticos de aviso y confirmación con plantillas editables, envío de la cotización por email, PDF con tu logo y marca, términos de crédito Contado / Net 30 / Net 60, precios negociados, descuentos y clientes automáticos. Incluye 7 días de prueba gratis.
@@ -137,7 +137,7 @@ Para probar Flouvia Cotizaciones B2B:
 VENDEDOR (admin):
 1. Abre la app en Apps → Flouvia. Si no tienes plan, en "Planes" elige "Plan Pro Mensual" (modo TEST, sin cargo) y aprueba.
 2. "Cotizaciones" → "Nueva cotización": elige productos, cantidades, términos de crédito y cliente → "Crear".
-3. Abre la cotización: edita precios, aplica descuento, asigna empresa; usa "Abrir link de pago", "Descargar PDF", "Enviar por email" y "Convertir en pedido".
+3. Abre la cotización: edita precios, aplica descuento, asigna empresa; usa "Abrir link de pago", "Descargar PDF" y "Enviar por email". El cliente paga en el checkout de Shopify y el pedido se crea automáticamente.
 4. "Empresas": crédito por empresa. "Analítica": ingresos y conversión. "Formulario": campos del formulario (Pro).
 5. "Configuración": pestañas Datos fiscales, Notificaciones, Correos, Crédito, Botón y PDF.
 6. CFDI 4.0 (Pro): en "Configuración" → "Datos fiscales" → "Conectar facturación CFDI" sube tu CSD del SAT (.cer + .key + contraseña) y conecta. Deja el toggle en "Pruebas". Para probar usa el CSD público del SAT: RFC EKU9003173C9, contraseña 12345678a.

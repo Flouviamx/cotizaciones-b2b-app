@@ -559,31 +559,6 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     return { ok: true, cfdiGenerated: true, uuid: result.uuid, uso };
   }
 
-  if (intent === "completarPedido") {
-    // Convierte la cotización (Draft Order) en un PEDIDO real de Shopify.
-    // paymentPending: true → crea el pedido con el pago PENDIENTE (no lo marca
-    // como pagado). Es lo correcto para B2B a crédito (Net 30/60) o pago por
-    // transferencia: el pedido ya existe y se puede surtir; el comerciante marca
-    // el pago cuando entre. La cotización pasa a estado COMPLETED.
-    const response = await admin.graphql(
-      `#graphql
-        mutation completarPedido($id: ID!) {
-          draftOrderComplete(id: $id, paymentPending: true) {
-            draftOrder {
-              id
-              status
-            }
-            userErrors { field message }
-          }
-        }`,
-      { variables: { id } },
-    );
-    const json: any = await response.json();
-    const errs = json.data?.draftOrderComplete?.userErrors ?? [];
-    if (errs.length > 0) return { error: errs.map((e: any) => e.message).join(", ") };
-    return { ok: true, completed: true };
-  }
-
   // --- Guardar productos, cantidades, precios y descuento ---
   const payload = JSON.parse(String(formData.get("payload") ?? "{}"));
   const items = payload.items ?? [];
@@ -682,9 +657,6 @@ export default function QuoteDetail() {
     fetcher.state !== "idle" && submittingIntent === "saveFiscal";
   const isGenerating =
     fetcher.state !== "idle" && submittingIntent === "generarCFDI";
-  const isCompleting =
-    fetcher.state !== "idle" && submittingIntent === "completarPedido";
-
   const yaEsPedido = quote.status === "COMPLETED";
 
   useEffect(() => {
@@ -701,9 +673,7 @@ export default function QuoteDetail() {
                 ? "Datos fiscales guardados"
                 : fetcher.data.cfdiGenerated
                   ? mensajeCFDI(fetcher.data.uso)
-                  : fetcher.data.completed
-                    ? "Cotización convertida en pedido"
-                    : "Cambios guardados";
+                  : "Cambios guardados";
       shopify.toast.show(msg);
     } else if (fetcher.data?.error) {
       shopify.toast.show(fetcher.data.error, { isError: true });
@@ -792,15 +762,6 @@ export default function QuoteDetail() {
       { intent: "generarCFDI", rfc, razonSocial, regimen, usoCfdi, cp },
       { method: "POST" },
     );
-
-  const convertirEnPedido = () => {
-    const ok = window.confirm(
-      "¿Convertir esta cotización en un pedido?\n\nSe creará un pedido real en Shopify con el pago PENDIENTE " +
-        "(podrás marcarlo como pagado cuando entre el dinero). Guarda primero cualquier cambio de precio.",
-    );
-    if (!ok) return;
-    fetcher.submit({ intent: "completarPedido" }, { method: "POST" });
-  };
 
   // Genera el PDF de la cotización con los datos en pantalla. Usa un iframe
   // oculto + el diálogo de impresión del navegador ("Guardar como PDF").
@@ -1197,30 +1158,25 @@ export default function QuoteDetail() {
           </p>
         </div>
 
-        {/* Convertir en pedido — todos los planes */}
+        {/* Estado del pedido */}
         <div className="qd-card">
-          <h2>Convertir en pedido</h2>
+          <h2>Estado del pedido</h2>
           {yaEsPedido ? (
             <div className="qd-success">
-              ✅ Esta cotización ya se convirtió en pedido. Búscalo en Shopify →
-              Pedidos para surtirlo o marcar el pago.
+              ✅ El cliente ya pagó esta cotización en el checkout de Shopify.
+              Búscala en Shopify → Pedidos para surtirla.
             </div>
           ) : (
-            <>
-              <p className="qd-muted">
-                Cuando el cliente acepte, conviértela en un pedido real de
-                Shopify con un clic. Se crea con el <b>pago pendiente</b>: ideal
-                para crédito (Net 30/60) o transferencia. Marcas el pago en
-                Shopify cuando entre el dinero.
-              </p>
-              <button
-                className="qd-btn primary"
-                onClick={convertirEnPedido}
-                disabled={isCompleting}
-              >
-                {isCompleting ? "Convirtiendo…" : "Convertir en pedido"}
-              </button>
-            </>
+            <p className="qd-muted">
+              Cuando el cliente acepte, comparte el <b>link de pago</b> de abajo:
+              paga de forma segura en el <b>checkout de Shopify</b> y el pedido
+              se crea automáticamente.
+              <br />
+              <br />
+              ¿Venta a crédito (Net 30/60) o por transferencia? Completa el
+              pedido a mano desde <b>Shopify → Pedidos → Borradores</b>, donde
+              puedes marcarlo como pago pendiente.
+            </p>
           )}
         </div>
 
