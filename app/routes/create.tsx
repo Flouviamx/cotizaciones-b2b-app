@@ -70,48 +70,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     customAttributes.push({ key: "Términos solicitados", value: terminos });
   if (notes) customAttributes.push({ key: "Notas del cliente", value: notes });
 
-  // Buscar o crear el cliente por correo, para enlazarlo a la cotización.
-  let customerId: string | null = null;
-  if (email && email.includes("@")) {
-    const findResp = await admin.graphql(
-      `#graphql
-        query findCustomer($q: String!) {
-          customers(first: 1, query: $q) {
-            edges { node { id } }
-          }
-        }`,
-      { variables: { q: `email:${email}` } },
-    );
-    const findJson: any = await findResp.json();
-    customerId = findJson.data?.customers?.edges?.[0]?.node?.id ?? null;
-
-    // Si no existe, lo creamos.
-    if (!customerId) {
-      const [firstName, ...rest] = name.split(" ");
-      const custInput: any = { email };
-      if (firstName) custInput.firstName = firstName;
-      if (rest.length) custInput.lastName = rest.join(" ");
-
-      const createResp = await admin.graphql(
-        `#graphql
-          mutation createCustomer($input: CustomerInput!) {
-            customerCreate(input: $input) {
-              customer { id }
-              userErrors { field message }
-            }
-          }`,
-        { variables: { input: custInput } },
-      );
-      const createJson: any = await createResp.json();
-      // Si falla la creación, seguimos sin cliente (no bloqueamos la cotización).
-      customerId = createJson.data?.customerCreate?.customer?.id ?? null;
-    }
-  }
-
+  // NO creamos ni enlazamos un registro de cliente de Shopify desde la tienda:
+  // hacerlo con PII tomada de este formulario es un bypass del checkout (regla
+  // 1.1.2 de la App Store). Los datos de contacto van solo como customAttributes
+  // para que el comerciante sepa a quién cotizar; el comprador captura sus datos
+  // reales en el checkout de Shopify al pagar el link de la cotización.
   const input: any = { lineItems, customAttributes };
-  if (customerId) {
-    input.purchasingEntity = { customerId };
-  }
 
   const response = await admin.graphql(
     `#graphql
