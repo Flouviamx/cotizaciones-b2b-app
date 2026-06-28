@@ -71,7 +71,7 @@
         '<div class="flouvia-stepper">' +
           '<div class="flouvia-step-item active" data-step-dot="1"><span class="flouvia-step-n">1</span><span class="flouvia-step-l">Productos</span></div>' +
           '<div class="flouvia-step-bar"><span data-flouvia-bar></span></div>' +
-          '<div class="flouvia-step-item" data-step-dot="2"><span class="flouvia-step-n">2</span><span class="flouvia-step-l">Contacto</span></div>' +
+          '<div class="flouvia-step-item" data-step-dot="2"><span class="flouvia-step-n">2</span><span class="flouvia-step-l">Datos</span></div>' +
           '<div class="flouvia-step-bar"><span data-flouvia-bar></span></div>' +
           '<div class="flouvia-step-item" data-step-dot="3"><span class="flouvia-step-n">3</span><span class="flouvia-step-l">Revisar</span></div>' +
         '</div>' +
