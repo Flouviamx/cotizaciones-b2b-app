@@ -110,6 +110,11 @@
     overlay: {{ s.overlay_dark | json }}
   };
 
+  // Estado de sesión del cliente (regla 1.1.2: la PII la captura el checkout,
+  // no el widget). Si no hay sesión, el modal pide iniciar sesión.
+  window.FLOUVIA_LOGGED_IN = {% if customer %}true{% else %}false{% endif %};
+  window.FLOUVIA_LOGIN_URL = {{ routes.account_login_url | json }};
+
   document.addEventListener('DOMContentLoaded', function () {
     if (!window.FlouviaQuote) return;
     var THEME = {

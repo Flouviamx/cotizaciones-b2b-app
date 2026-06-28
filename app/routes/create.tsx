@@ -1,9 +1,6 @@
 import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
-import {
-  notifyMerchantNewQuote,
-  notifyRequesterQuoteReceived,
-} from "../notify.server";
+import { notifyMerchantNewQuote } from "../notify.server";
 import { mergeEmails } from "../email-templates";
 import { evaluarLimite } from "../limites.server";
 
@@ -50,9 +47,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     );
   }
 
-  const name = body.name ? String(body.name).trim() : "";
-  const email = body.email ? String(body.email).trim() : "";
-  const phone = body.phone ? String(body.phone).trim() : "";
+  // Solo campos B2B que NO existen en el checkout de Shopify.
+  // Nombre/email/teléfono los captura el checkout cuando el cliente paga (regla 1.1.2).
   const company = body.company ? String(body.company).trim() : "";
   const rfc = body.rfc ? String(body.rfc).trim().toUpperCase() : "";
   const terminos = body.terminos ? String(body.terminos).trim() : "";
@@ -61,21 +57,34 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const customAttributes: { key: string; value: string }[] = [
     { key: "Origen", value: "Solicitud desde la tienda" },
   ];
-  if (name) customAttributes.push({ key: "Solicitante", value: name });
-  if (email) customAttributes.push({ key: "Email solicitante", value: email });
-  if (phone) customAttributes.push({ key: "Teléfono", value: phone });
   if (company) customAttributes.push({ key: "Empresa", value: company });
   if (rfc) customAttributes.push({ key: "RFC", value: rfc });
   if (terminos)
     customAttributes.push({ key: "Términos solicitados", value: terminos });
   if (notes) customAttributes.push({ key: "Notas del cliente", value: notes });
 
-  // NO creamos ni enlazamos un registro de cliente de Shopify desde la tienda:
-  // hacerlo con PII tomada de este formulario es un bypass del checkout (regla
-  // 1.1.2 de la App Store). Los datos de contacto van solo como customAttributes
-  // para que el comerciante sepa a quién cotizar; el comprador captura sus datos
-  // reales en el checkout de Shopify al pagar el link de la cotización.
-  const input: any = { lineItems, customAttributes };
+  // Exigimos sesión iniciada: el App Proxy incluye logged_in_customer_id en la
+  // URL cuando el cliente está logueado. Los datos personales vienen de SU
+  // cuenta de Shopify, NO de un formulario (regla 1.1.2). Sin sesión, no
+  // creamos nada.
+  const url = new URL(request.url);
+  const loggedInId = url.searchParams.get("logged_in_customer_id");
+  if (!loggedInId || loggedInId === "0") {
+    return Response.json(
+      {
+        ok: false,
+        error: "Inicia sesión para solicitar tu cotización.",
+        needsLogin: true,
+      },
+      { status: 401 },
+    );
+  }
+
+  const input: any = {
+    lineItems,
+    customAttributes,
+    purchasingEntity: { customerId: `gid://shopify/Customer/${loggedInId}` },
+  };
 
   const response = await admin.graphql(
     `#graphql
@@ -135,9 +144,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await notifyMerchantNewQuote({
         merchantEmail,
         quoteName,
-        requesterName: name,
-        requesterEmail: email,
-        requesterPhone: phone,
+        requesterName: "",
+        requesterEmail: "",
+        requesterPhone: "",
         company,
         rfc,
         terminos,
@@ -146,17 +155,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         templates,
       });
     }
-
-    // Confirmación automática al comprador — solo desde Básico.
-    if (limite.paid && email) {
-      await notifyRequesterQuoteReceived({
-        requesterEmail: email,
-        requesterName: name,
-        quoteName,
-        shopName,
-        templates,
-      });
-    }
+    // La confirmación automática al comprador requiere su email, que ya no
+    // recopilamos en el widget (regla 1.1.2). El comprador recibe el link
+    // de pago cuando el comerciante envía la cotización desde el admin.
   } catch {
     // No bloqueamos la cotización si el aviso falla.
   }

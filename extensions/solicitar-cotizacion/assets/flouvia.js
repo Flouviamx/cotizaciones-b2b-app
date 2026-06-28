@@ -86,11 +86,8 @@
             '</div>' +
           '</section>' +
           '<section data-flouvia-panel="2" style="display:none;">' +
-            '<p class="flouvia-lead" data-fq-lead="2">¿A quién contactamos con la cotización?</p>' +
+            '<p class="flouvia-lead" data-fq-lead="2">Datos adicionales para tu cotización (opcionales).</p>' +
             '<div class="flouvia-grid">' +
-              '<div class="flouvia-field"><label class="flouvia-label">Nombre <span class="flouvia-req">*</span></label><input type="text" class="flouvia-input" data-flouvia-name placeholder="Tu nombre" /><span class="flouvia-err" data-err-name></span></div>' +
-              '<div class="flouvia-field"><label class="flouvia-label">Correo electrónico <span class="flouvia-req">*</span></label><input type="email" class="flouvia-input" data-flouvia-email placeholder="tucorreo@empresa.com" /><span class="flouvia-err" data-err-email></span></div>' +
-              '<div class="flouvia-field flouvia-pro"><label class="flouvia-label">Teléfono</label><input type="tel" class="flouvia-input" data-flouvia-phone placeholder="55 1234 5678" /></div>' +
               '<div class="flouvia-field flouvia-pro"><label class="flouvia-label">Empresa</label><input type="text" class="flouvia-input" data-flouvia-company placeholder="Mi Empresa SA de CV" /></div>' +
               '<div class="flouvia-field flouvia-pro"><label class="flouvia-label">RFC <span class="flouvia-muted">(para tu factura)</span></label><input type="text" class="flouvia-input" data-flouvia-rfc maxlength="13" placeholder="XAXX010101000" /><span class="flouvia-err" data-err-rfc></span></div>' +
               '<div class="flouvia-field flouvia-pro"><label class="flouvia-label">Términos de pago que solicitas</label><select class="flouvia-input" data-flouvia-terminos></select></div>' +
@@ -299,7 +296,6 @@
   }
 
   // ---------------------------------------------------------- validación
-  function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
   function validRfc(v) { return /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/.test(v); }
   function mark(input, errAttr, errText) {
     input.classList.toggle('bad', !!errText);
@@ -308,16 +304,10 @@
   }
   function validateStep2() {
     var ok = true;
-    var name = field('[data-flouvia-name]');
-    var email = field('[data-flouvia-email]');
     var rfc = field('[data-flouvia-rfc]');
-    if (!name.value.trim()) { mark(name, 'data-err-name', 'Escribe tu nombre.'); ok = false; }
-    else { mark(name, 'data-err-name', ''); }
-    if (!validEmail(email.value.trim())) { mark(email, 'data-err-email', 'Correo no válido.'); ok = false; }
-    else { mark(email, 'data-err-email', ''); }
-    if (state.pro && rfc.value.trim() && !validRfc(rfc.value.trim().toUpperCase())) {
+    if (rfc && state.pro && rfc.value.trim() && !validRfc(rfc.value.trim().toUpperCase())) {
       mark(rfc, 'data-err-rfc', 'RFC no válido (12 o 13 caracteres).'); ok = false;
-    } else { mark(rfc, 'data-err-rfc', ''); }
+    } else if (rfc) { mark(rfc, 'data-err-rfc', ''); }
     return ok;
   }
 
@@ -353,16 +343,14 @@
     }).join('');
     var rows = [];
     function add(k, v) { if (v && v.trim()) rows.push('<span class="k">' + k + '</span><span class="v">' + escapeHtml(v) + '</span>'); }
-    add('Nombre', field('[data-flouvia-name]').value);
-    add('Correo', field('[data-flouvia-email]').value);
     if (state.pro) {
-      add('Teléfono', field('[data-flouvia-phone]').value);
       add('Empresa', field('[data-flouvia-company]').value);
       add('RFC', field('[data-flouvia-rfc]').value);
       add('Términos', els.terminosSel ? els.terminosSel.value : '');
     }
     add('Notas', field('[data-flouvia-notes]').value);
-    els.overlay.querySelector('[data-flouvia-review-contact]').innerHTML = rows.join('');
+    var contactBox = els.overlay.querySelector('[data-flouvia-review-contact]');
+    contactBox.innerHTML = rows.length ? rows.join('') : '<span class="flouvia-muted">Sin datos adicionales.</span>';
   }
 
   // ------------------------------------------------------------- enviar
@@ -372,12 +360,9 @@
     setMsg('Enviando solicitud…');
     var payload = {
       lineItems: state.items.map(function (it) { return { variantId: it.variantId, quantity: it.quantity }; }),
-      name: field('[data-flouvia-name]').value.trim(),
-      email: field('[data-flouvia-email]').value.trim(),
       notes: field('[data-flouvia-notes]').value.trim()
     };
     if (state.pro) {
-      payload.phone = field('[data-flouvia-phone]').value.trim();
       payload.company = field('[data-flouvia-company]').value.trim();
       payload.rfc = field('[data-flouvia-rfc]').value.trim().toUpperCase();
       payload.terminos = els.terminosSel ? els.terminosSel.value : '';
@@ -432,6 +417,14 @@
     els.overlay.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
 
+    // Exigir inicio de sesión: los datos personales (nombre/email/dirección)
+    // los captura el checkout de Shopify (regla 1.1.2). Sin sesión, no
+    // recolectamos nada en la tienda: mostramos el aviso para iniciar sesión.
+    if (window.FLOUVIA_LOGGED_IN === false) {
+      showLoginGate();
+      return;
+    }
+
     state.step = 1;
     setMsg('Cargando…');
     // Reconstruir el pie/stepper por si una solicitud previa lo dejó en "éxito"
@@ -448,6 +441,30 @@
       showStep(1);
     });
   }
+  // Aviso de "inicia sesión" cuando el cliente no tiene sesión iniciada.
+  function showLoginGate() {
+    snapshot();
+    setMsg('');
+    var stepper = els.overlay.querySelector('.flouvia-stepper');
+    if (stepper) stepper.style.display = 'none';
+    var loginUrl = window.FLOUVIA_LOGIN_URL || '/account/login';
+    try {
+      var sep = loginUrl.indexOf('?') === -1 ? '?' : '&';
+      loginUrl += sep + 'return_url=' +
+        encodeURIComponent(window.location.pathname + window.location.search);
+    } catch (e) {}
+    els.bodyEl.innerHTML =
+      '<div class="flouvia-login-gate">' +
+        '<div class="flouvia-login-ic">🔒</div>' +
+        '<div class="flouvia-login-t">Inicia sesión para cotizar</div>' +
+        '<div class="flouvia-login-d">Para enviarte tu cotización y el link de pago necesitamos que inicies sesión o crees tu cuenta.</div>' +
+      '</div>';
+    els.footEl.innerHTML =
+      '<div class="flouvia-foot-btns">' +
+        '<a class="flouvia-btn primary" href="' + escapeHtml(loginUrl) + '">Iniciar sesión</a>' +
+      '</div>';
+  }
+
   // Si tras un envío exitoso se reabre el modal, reconstruimos cuerpo y pie.
   var pristineFoot = null, pristineBody = null;
   function snapshot() {

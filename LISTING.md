@@ -88,13 +88,13 @@ Plan Gratis — $0.00 USD
 Descripción: Hasta 5 cotizaciones activas. Botón "Solicitar cotización" en carrito, producto y flotante, precios negociados por producto, descuentos, link de pago (checkout de Shopify), PDF descargable y modo "solo cotización" (oculta precios y carrito). Incluye la marca "Cotizaciones por Flouvia" en la ventana del cliente. Ideal para empezar sin costo.
 
 Plan Básico Mensual — $29.00 USD / mes
-Descripción: Cotizaciones ilimitadas (sin la marca Flouvia), correos automáticos de aviso y confirmación con plantillas editables, envío de la cotización por email, PDF con tu logo y marca, términos de crédito Contado / Net 30 / Net 60, precios negociados, descuentos y clientes automáticos. Incluye 7 días de prueba gratis.
+Descripción: Cotizaciones ilimitadas (sin la marca Flouvia), correos automáticos de aviso con plantillas editables, envío de la cotización por email, PDF con tu logo y marca, términos de crédito Contado / Net 30 / Net 60, precios negociados, descuentos y enlace automático a la cuenta del cliente. Incluye 7 días de prueba gratis.
 
 Plan Básico Anual — $290.00 USD / año  (equivale a 10 meses, 2 gratis)
 Descripción: Todo el Plan Básico Mensual con 2 meses de ahorro. Incluye 7 días de prueba gratis.
 
 Plan Pro Mensual — $59.00 USD / mes
-Descripción: Todo lo del Plan Básico más facturación CFDI automática, empresas B2B con límite de crédito, campos B2B en la tienda (teléfono, empresa, RFC, términos), formulario de cotización personalizable, analítica avanzada y soporte prioritario. Incluye 7 días de prueba gratis.
+Descripción: Todo lo del Plan Básico más facturación CFDI automática, empresas B2B con límite de crédito, campos B2B en la tienda (empresa, RFC, términos), formulario de cotización personalizable, analítica avanzada y soporte prioritario. Incluye 7 días de prueba gratis.
 
 Plan Pro Anual — $590.00 USD / año  (equivale a 10 meses, 2 gratis)
 Descripción: Todo el Plan Pro Mensual con 2 meses de ahorro. Incluye 7 días de prueba gratis.
@@ -144,9 +144,10 @@ VENDEDOR (admin):
 7. Emitir factura: en una cotización, sección "Datos fiscales (CFDI)", captura el RFC del cliente → "Generar factura CFDI" (sale el folio/UUID). Receptor de prueba: RFC XAXX010101000, régimen 616, uso S01, CP 26015.
 
 COMPRADOR (tienda):
-1. Agrega un producto al carrito.
-2. Activa el botón: Tienda online → Temas → Personalizar → "Incrustaciones de la app" → activa "Flouvia" y enciende el botón flotante, en /cart y/o en tarjetas de producto → Guardar. (Alternativa: en Carrito o Producto → Agregar bloque → Apps → Solicitar cotización.)
-3. Abre "Solicitar cotización". Paso 1 Productos (edita/quita ítems). Paso 2 Contacto (nombre, email, empresa, RFC, términos; campos extra en Pro). Paso 3 Revisar → envía. Aparece el folio (#D001).
+1. Inicia sesión con tu cuenta de la tienda (requisito para cotizar).
+2. Agrega un producto al carrito.
+3. Activa el botón: Tienda online → Temas → Personalizar → "Incrustaciones de la app" → activa "Flouvia" y enciende el botón flotante, en /cart y/o en tarjetas de producto → Guardar. (Alternativa: en Carrito o Producto → Agregar bloque → Apps → Solicitar cotización.)
+4. Abre "Solicitar cotización". Paso 1 Productos (edita/quita ítems). Paso 2 Datos B2B opcionales (empresa, RFC, términos, notas — campos Pro). Paso 3 Revisar → envía. Aparece el folio (#D001). Tus datos personales se capturan en el checkout de Shopify al pagar.
 4. En el admin, la cotización aparece con el badge "Desde la tienda".
 
 ---
@@ -207,7 +208,7 @@ Subtext:  "Sin WhatsApp · Sin llamadas · Directo desde tu tienda"
 
 Qué mostrar:
 - Tu tienda dev con el modal abierto en el Paso 1 (Productos).
-- El stepper de 3 pasos visible arriba (1 Productos, 2 Contacto, 3 Revisar).
+- El stepper de 3 pasos visible arriba (1 Productos, 2 Datos B2B, 3 Revisar).
 - Al menos 2 productos en la lista con sus controles −/+ y botón de quitar.
 - El botón "Siguiente" visible en la parte inferior del modal.
 Cómo prepararlo:
@@ -218,21 +219,22 @@ Cómo prepararlo:
 
 ---
 
-### Screenshot 4 — Modal de 3 pasos (storefront — paso 2 Contacto, campos Pro)
+### Screenshot 4 — Modal de 3 pasos (storefront — paso 2 Datos B2B, campos Pro)
 Alt text:
-Formulario B2B con empresa, RFC y términos de crédito en el modal
+Campos B2B (empresa, RFC y términos de crédito) en el modal de cotización
 
 Headline: "Captura empresa, RFC y términos desde el primer contacto"
-Subtext:  "Teléfono · Empresa · RFC · Net 30 / Net 60 — con Plan Pro"
+Subtext:  "Empresa · RFC · Net 30 / Net 60 — con Plan Pro"
 
 Qué mostrar:
-- El modal en el Paso 2 (Contacto) con TODOS los campos Pro visibles:
-  Nombre, Email, Teléfono, Empresa, RFC, selector de Términos de crédito, Notas.
+- El modal en el Paso 2 (Datos B2B) con los campos Pro visibles:
+  Empresa, RFC, selector de Términos de crédito, Notas.
+  (NO se piden nombre/email/teléfono: esos los captura el checkout de Shopify.)
 - El indicador de Plan Pro o simplemente los campos llenos.
 - Validación de RFC en vivo activa (el campo verde si el RFC es válido).
 Cómo prepararlo:
-1. Con Plan Pro activo, ve a la tienda y abre el modal.
-2. Llena todos los campos con datos de ejemplo.
+1. Con Plan Pro activo, inicia sesión en la tienda y abre el modal.
+2. Llena los campos B2B con datos de ejemplo.
 3. Captura cuando el RFC esté validado (borde verde).
 
 ---
@@ -353,16 +355,16 @@ Cómo prepararlo:
 
 ### Screenshot 11 — Formulario personalizable (Plan Pro)
 Alt text:
-Editor del formulario de cotización con campos personalizables B2B
+Editor de textos y apariencia del formulario de cotización
 
 Headline: "Personaliza el formulario de cotización"
-Subtext:  "Activa o desactiva campos · Teléfono · Empresa · RFC · Términos"
+Subtext:  "Título · Mensajes de cada paso · Color de acento de la ventana"
 
 Qué mostrar:
-- Ruta /app/formulario con Plan Pro activo: los toggles de campos y la preview del modal.
+- Ruta /app/formulario con Plan Pro activo: los campos de textos/colores y la preview del modal.
 Cómo prepararlo:
 1. Activa Plan Pro.
-2. Ve a /app/formulario y enciende/apaga algunos campos para que se vea el control.
+2. Ve a /app/formulario y cambia el título y el color para que se vea el control en la preview.
 
 ---
 
@@ -479,11 +481,11 @@ Pausa 1 segundo. Corte directo a la siguiente escena.
 
 Escena: tu tienda dev con el carrito abierto.
 
-1. Muestra el carrito con 2–3 productos y el botón "Solicitar cotización" visible.
+1. Con la sesión del comprador ya iniciada, muestra el carrito con 2–3 productos y el botón "Solicitar cotización" visible.
 2. Da clic en el botón → se abre el modal.
 3. Paso 1 (Productos): muestra la lista con cantidades editables, cambia una cantidad.
 4. Da clic en "Siguiente".
-5. Paso 2 (Contacto): llena Nombre, Email, Empresa, RFC, Términos "Net 30", Notas breve.
+5. Paso 2 (Datos B2B): llena Empresa, RFC, Términos "Net 30", Notas breve. (No se piden nombre/email/teléfono: los captura el checkout.)
 6. Da clic en "Siguiente".
 7. Paso 3 (Revisar): enseña el resumen 2 segundos.
 8. Da clic en "Enviar solicitud" → aparece la pantalla de confirmación con el folio.

@@ -14,6 +14,10 @@
     success: {{ block.settings.success_message | json }},
     accent: {{ block.settings.accent_color | json }}
   };
+
+  // Estado de sesión del cliente (regla 1.1.2: la PII la captura el checkout).
+  window.FLOUVIA_LOGGED_IN = {% if customer %}true{% else %}false{% endif %};
+  window.FLOUVIA_LOGIN_URL = {{ routes.account_login_url | json }};
 </script>
 
 {% assign fq = block.settings %}
