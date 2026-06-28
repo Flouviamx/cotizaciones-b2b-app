@@ -161,7 +161,7 @@ export function construirPreviewFormulario(
           : `<div class="stepper">
         <div class="${dotClass(1)}"><span class="sn">1</span><span class="sl">Productos</span></div>
         <div class="sbar"><span style="width:${barW(0)}"></span></div>
-        <div class="${dotClass(2)}"><span class="sn">2</span><span class="sl">Contacto</span></div>
+        <div class="${dotClass(2)}"><span class="sn">2</span><span class="sl">Datos</span></div>
         <div class="sbar"><span style="width:${barW(1)}"></span></div>
         <div class="${dotClass(3)}"><span class="sn">3</span><span class="sl">Revisar</span></div>
       </div>`
@@ -185,18 +185,16 @@ export function construirPreviewFormulario(
         <section class="panel${on(2)}">
           <p class="lead">${esc(t.leadPaso2)}</p>
           <div class="grid">
-            <div class="field"><label class="label">Nombre <span class="req">*</span></label><input class="input" value="María González" readonly /></div>
-            <div class="field"><label class="label">Correo <span class="req">*</span></label><input class="input" value="maria@empresa.com" readonly /></div>
             ${
               pro
-                ? `<div class="field"><label class="label">Teléfono</label><input class="input" value="55 1234 5678" readonly /></div>
-            <div class="field"><label class="label">Empresa</label><input class="input" value="ACME SA de CV" readonly /></div>
+                ? `<div class="field"><label class="label">Empresa</label><input class="input" value="ACME SA de CV" readonly /></div>
             <div class="field"><label class="label">RFC <span class="muted">(para tu factura)</span></label><input class="input" value="ACM010101AB1" readonly /></div>
             <div class="field"><label class="label">Términos de pago</label><input class="input" value="Net 30" readonly /></div>`
                 : ""
             }
             <div class="field full"><label class="label">Notas</label><textarea class="input" readonly>Necesito 200 unidades, entrega antes del día 15.</textarea></div>
           </div>
+          <p class="muted" style="margin-top:10px">Tus datos (nombre, correo, dirección) se piden en el checkout seguro de Shopify al pagar.</p>
         </section>
 
         <section class="panel${on(3)}">
@@ -207,11 +205,9 @@ export function construirPreviewFormulario(
             <div class="rrow"><span>Pantalón clásico · Talla 32</span><span class="q">×1</span></div>
           </div>
           <div class="rcard">
-            <div class="rh">Tus datos</div>
+            <div class="rh">Datos B2B</div>
             <div class="rc">
-              <span class="k">Nombre</span><span>María González</span>
-              <span class="k">Correo</span><span>maria@empresa.com</span>
-              ${pro ? `<span class="k">Empresa</span><span>ACME SA de CV</span><span class="k">RFC</span><span>ACM010101AB1</span>` : ""}
+              ${pro ? `<span class="k">Empresa</span><span>ACME SA de CV</span><span class="k">RFC</span><span>ACM010101AB1</span><span class="k">Términos</span><span>Net 30</span>` : `<span class="k">Notas</span><span>Necesito 200 unidades…</span>`}
             </div>
           </div>
         </section>

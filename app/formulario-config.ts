@@ -33,7 +33,7 @@ export const DEFAULT_FORMULARIO: FormularioConfig = {
       "El vendedor revisará tu solicitud y te contactará con la cotización y el link de pago.",
     leadPaso1:
       "Estos son los productos de tu carrito. Ajusta las cantidades que quieres cotizar.",
-    leadPaso2: "¿A quién contactamos con la cotización?",
+    leadPaso2: "Datos adicionales para tu cotización (opcionales).",
     leadPaso3: "Revisa que todo esté correcto antes de enviar.",
   },
   apariencia: {
