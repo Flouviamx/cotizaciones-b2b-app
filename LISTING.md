@@ -124,9 +124,15 @@ App submission email: hola@flouvia.com
 
 ## Test account (para el revisor de Shopify)
 
+CUENTA DE ADMIN (para probar la app en el admin):
 Username: (tu email de tienda de desarrollo)
 Password: (contraseña de la tienda de desarrollo)
-Account description: Acceso completo al admin de la tienda de prueba con la app instalada y el Plan Pro activo. El billing está en modo TEST — no se realiza ningún cargo.
+
+CUENTA DE CLIENTE (necesaria para probar el flujo del comprador en la tienda):
+Username: (email de una cuenta de cliente registrada en la tienda)
+Password: (contraseña de esa cuenta de cliente)
+
+Account description: La cuenta de admin da acceso completo a la app con el Plan Pro activo (billing en modo TEST — sin cargos). IMPORTANTE: para solicitar una cotización desde la tienda el comprador DEBE iniciar sesión (así la cotización se enlaza a su cuenta y NO pedimos nombre/email/teléfono en el formulario — esos datos los captura el checkout de Shopify al pagar). Usa la cuenta de cliente de arriba para probar ese flujo. Si prefieres crear tu propia cuenta, regístrala en la página de la tienda antes de abrir el botón "Solicitar cotización".
 
 ---
 
@@ -148,7 +154,7 @@ COMPRADOR (tienda):
 2. Agrega un producto al carrito.
 3. Activa el botón: Tienda online → Temas → Personalizar → "Incrustaciones de la app" → activa "Flouvia" y enciende el botón flotante, en /cart y/o en tarjetas de producto → Guardar. (Alternativa: en Carrito o Producto → Agregar bloque → Apps → Solicitar cotización.)
 4. Abre "Solicitar cotización". Paso 1 Productos (edita/quita ítems). Paso 2 Datos B2B opcionales (empresa, RFC, términos, notas — campos Pro). Paso 3 Revisar → envía. Aparece el folio (#D001). Tus datos personales se capturan en el checkout de Shopify al pagar.
-4. En el admin, la cotización aparece con el badge "Desde la tienda".
+5. En el admin, la cotización aparece con el badge "Desde la tienda".
 
 ---
 
@@ -432,6 +438,19 @@ Mínimo para publicar: screenshots 1, 2, 3, 4 y 5.
 | Tamaño máximo | ~50 MB (comprime con HandBrake si pasas) |
 | Relación | 16:9 |
 | Audio | Opcional; si no hay voz, pon música suave de fondo (sin derechos) |
+| **Idioma** | **OBLIGATORIO: en inglés o con subtítulos en inglés** (rechazo 4.5.3, jul 2026) |
+
+### ⚠️ Requisitos del revisor (rechazo 4.5.3 — jul 2026)
+
+El screencast DEBE mostrar paso a paso, en inglés o con subtítulos en inglés:
+1. **Setup en el storefront** (esto lo pidieron explícitamente): Online Store → Themes →
+   Customize → App embeds → activar "Flouvia" → encender botón flotante / cart / tarjetas → Save.
+   (Y/o agregar el app block en producto: Add block → Apps → Solicitar cotización.)
+2. El comprador inicia sesión en la tienda y solicita la cotización (modal de 3 pasos).
+3. El vendedor gestiona la cotización en el admin (precios, descuento, link de pago).
+4. **Cambio de plan**: elegir un plan de pago Y el botón "Cambiar al plan Gratis" (cancelar)
+   — demuestra los fixes de 1.2.2/1.2.3.
+5. Los textos en pantalla del guión de abajo escríbelos en inglés (traducción incluida en cada escena).
 
 ### Herramientas recomendadas para grabar y editar
 
@@ -477,7 +496,20 @@ Pausa 1 segundo. Corte directo a la siguiente escena.
 
 ---
 
-**[0:08–0:20] — El comprador solicita desde la tienda**
+**[0:08–0:18] — Activar la app en la tienda (LO PIDIÓ EL REVISOR)**
+
+Escena: editor de temas de Shopify.
+
+1. Online Store → Themes → Customize.
+2. Abre "App embeds" (ícono de apps en la barra izquierda) → activa "Flouvia".
+3. Enciende el botón flotante y el botón en /cart → Save.
+4. Muestra 2 segundos la tienda con el botón ya visible.
+
+Texto en pantalla: `"Enable the app in your theme — no code needed"`
+
+---
+
+**[0:18–0:30] — El comprador solicita desde la tienda**
 
 Escena: tu tienda dev con el carrito abierto.
 
@@ -489,6 +521,8 @@ Escena: tu tienda dev con el carrito abierto.
 6. Da clic en "Siguiente".
 7. Paso 3 (Revisar): enseña el resumen 2 segundos.
 8. Da clic en "Enviar solicitud" → aparece la pantalla de confirmación con el folio.
+
+Nota: el comprador debe tener sesión iniciada. Sin login, el botón pide iniciar sesión (así no recabamos datos personales; los captura el checkout).
 
 Texto en pantalla: `"El comprador solicita desde tu tienda en 3 pasos"`
 
@@ -560,13 +594,13 @@ Música: fade out suave al final.
 
 ## Checklist final antes de publicar
 
-- [ ] `BILLING_TEST = false` en `app.plans.tsx` (ya no está en `app.tsx`)
+- [ ] `SHOPIFY_BILLING_TEST="false"` en Vercel (controla `app/billing.server.ts`; sin la var = modo prueba)
 - [ ] URL de producción real en `shopify.app.toml` (`application_url`) — no puede ser `example.com`
 - [ ] App desplegada con `npm run deploy` (registra webhooks GDPR)
 - [ ] `PRIVACY.md` hosteado en URL pública (https://flouvia.com/privacidad)
 - [ ] `CONTACT_TO` configurado con correo real de soporte en `.env`
 - [ ] `RESEND_FROM` con dominio verificado en Resend (producción)
-- [ ] Credenciales Facturama sandbox probadas (o producción si ya tienes cuenta)
+- [ ] Credenciales Facturapi probadas (modo Pruebas validado; para Real cada comerciante conecta su CSD del SAT)
 - [ ] Mínimo 3 screenshots subidas (recomendado 6+)
 - [ ] Video demo subido
 - [ ] Descripción larga revisada y pegada en el Partner Dashboard

@@ -56,6 +56,33 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { billing } = await authenticate.admin(request);
   const formData = await request.formData();
+
+  // Bajar al Plan Gratis = cancelar la suscripción de pago activa.
+  // Requisito 1.2.2/1.2.3 de la App Store: el comerciante debe poder
+  // cancelar o bajar de plan desde la app, sin soporte ni reinstalar.
+  if (String(formData.get("intent")) === "cancelar") {
+    try {
+      const check = await billing.check({
+        plans: TODOS_LOS_PLANES as any,
+        isTest: BILLING_TEST,
+      });
+      for (const sub of check.appSubscriptions ?? []) {
+        await billing.cancel({
+          subscriptionId: sub.id,
+          isTest: BILLING_TEST,
+          prorate: true,
+        });
+      }
+      return { cancelado: true };
+    } catch (e: any) {
+      if (e instanceof Response) throw e;
+      console.error("BILLING CANCEL ERROR:", e?.name, e?.message, e);
+      return {
+        error: `No se pudo cancelar la suscripción. ${e?.message ?? ""}`,
+      };
+    }
+  }
+
   const plan = String(formData.get("plan"));
   try {
     return await billing.request({ plan: plan as any, isTest: BILLING_TEST });
@@ -95,7 +122,7 @@ const FEATURES_FREE = [
   'Botón "Solicitar cotización" en la tienda',
   "Precios negociados y descuentos",
   "Aviso por correo de nuevas solicitudes",
-  "Convertir cotización en pedido",
+  "Convertir cotización en pedido (pago en checkout de Shopify)",
   "PDF descargable (diseño por defecto)",
 ];
 
@@ -408,6 +435,13 @@ const CSS = `
   padding: 13px; min-height: 48px; font-size: 15px; font-weight: 700; cursor: pointer; transition: opacity .15s ease; }
 .fp-cta:hover { opacity: .9; }
 .fp-cta.basic { background: #1a1a2e; color: #fff; }
+.fp-cta.downgrade { background: #fff; color: #374151; border: 1.5px solid #d1d5db; }
+.fp-cta.downgrade:hover { border-color: #9ca3af; opacity: 1; }
+.fp-cta.cancelar { background: #dc2626; color: #fff; }
+.fp-downgrade-back { display: block; width: 100%; margin-top: 8px; background: transparent;
+  border: 0; color: #6b7280; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px; }
+.fp-downgrade-back:hover { color: #374151; }
+.fp-downgrade-nota { font-size: 12px; color: #9ca3af; line-height: 1.45; margin: 8px 0 0; }
 .fp-cta.pro { background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff; }
 .fp-cta.plus { background: linear-gradient(135deg, #5b3df5, #8b5cf6); color: #fff; }
 .fp-locked { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; box-sizing: border-box;
@@ -482,11 +516,14 @@ function celdaComparativa(valor: boolean | string) {
 
 export default function Plans() {
   const { activos, esShopifyPlus } = useLoaderData<typeof loader>();
-  const actionData = useActionData<typeof action>();
+  const actionData = useActionData<typeof action>() as
+    | { error?: string; cancelado?: boolean }
+    | undefined;
 
   const [intervalo, setIntervalo] = useState<"mensual" | "anual">("mensual");
   const [faqAbierta, setFaqAbierta] = useState<number | null>(0);
   const [tablaAbierta, setTablaAbierta] = useState(false);
+  const [confirmandoGratis, setConfirmandoGratis] = useState(false);
 
   const esAnual = intervalo === "anual";
   // Sin ningún plan de pago activo = la tienda está en el Plan Gratis.
@@ -504,6 +541,12 @@ export default function Plans() {
       {actionData?.error ? (
         <s-banner tone="critical" heading="No se pudo procesar el plan">
           {actionData.error}
+        </s-banner>
+      ) : null}
+      {actionData?.cancelado ? (
+        <s-banner tone="success" heading="Plan cancelado">
+          Listo: tu suscripción se canceló y ahora estás en el Plan Gratis.
+          Puedes volver a un plan de pago cuando quieras desde esta página.
         </s-banner>
       ) : null}
 
@@ -552,8 +595,33 @@ export default function Plans() {
             <div className="fp-equiv">&nbsp;</div>
             {esFree ? (
               <div className="fp-current">Tu plan actual</div>
+            ) : confirmandoGratis ? (
+              <div>
+                <Form method="post">
+                  <input type="hidden" name="intent" value="cancelar" />
+                  <button type="submit" className="fp-cta cancelar">
+                    Sí, cancelar mi suscripción
+                  </button>
+                </Form>
+                <button
+                  className="fp-downgrade-back"
+                  onClick={() => setConfirmandoGratis(false)}
+                >
+                  No, conservar mi plan
+                </button>
+                <p className="fp-downgrade-nota">
+                  Se cancela tu plan de pago y pasas al Plan Gratis (tope de{" "}
+                  {LIMITE_FREE} cotizaciones activas). Tus cotizaciones no se
+                  borran.
+                </p>
+              </div>
             ) : (
-              <div className="fp-free-tag">Incluido al instalar</div>
+              <button
+                className="fp-cta downgrade"
+                onClick={() => setConfirmandoGratis(true)}
+              >
+                Cambiar al plan Gratis
+              </button>
             )}
             <ul className="fp-feats">
               {FEATURES_FREE.map((f) => (
