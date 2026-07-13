@@ -126,91 +126,37 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return { ok: true, formulario };
 };
 
-const CSS = `
-.ff-wrap { max-width: 1180px; margin: 0 auto; padding: 8px 16px 130px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; color: #1a1a2e; }
-
-.ff-hero { position: relative; overflow: hidden; border-radius: 20px; padding: 26px 28px;
-  background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff;
-  box-shadow: 0 14px 34px -12px rgba(26,115,232,.5); margin: 8px 0 22px; }
-.ff-hero::after { content: ""; position: absolute; top: -60px; right: -40px; width: 220px; height: 220px;
-  background: rgba(255,255,255,.12); border-radius: 50%; }
-.ff-hero h1 { font-size: 26px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.02em; position: relative; }
-.ff-hero p { font-size: 15px; margin: 0; opacity: .92; position: relative; max-width: 600px; }
-.ff-badge { display: inline-flex; align-items: center; gap: 5px; vertical-align: middle; margin-left: 10px;
-  background: rgba(255,255,255,.22); color: #fff; font-size: 12px; font-weight: 800; padding: 3px 10px;
-  border-radius: 999px; }
-
-/* Layout editor + preview */
-.ff-grid { display: grid; grid-template-columns: 1fr 1.05fr; gap: 24px; align-items: start; }
-.ff-card { background: #fff; border: 1px solid #ececf0; border-radius: 18px; padding: 22px 24px;
-  box-shadow: 0 4px 16px -8px rgba(20,20,40,.1); }
-.ff-card h2 { font-size: 16px; font-weight: 800; margin: 0 0 4px; }
-.ff-card .sub { font-size: 13px; color: #6b7280; margin: 0 0 16px; line-height: 1.5; }
-.ff-sec { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
-  color: #9099a8; margin: 22px 0 12px; padding-top: 18px; border-top: 1px solid #f1f1f4; }
-.ff-sec:first-of-type { border-top: 0; padding-top: 0; margin-top: 6px; }
-
-.ff-field { display: flex; flex-direction: column; margin-bottom: 14px; }
-.ff-label { font-size: 12.5px; font-weight: 700; color: #374151; margin-bottom: 6px; }
-.ff-hint { font-size: 11.5px; color: #9099a8; margin-bottom: 6px; }
-.ff-input { width: 100%; padding: 10px 12px; border: 1px solid #d8d8e0; border-radius: 10px;
-  font-size: 14px; font-family: inherit; color: #1a1a2e; background: #fff; outline: none; box-sizing: border-box; }
-.ff-input:focus { border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,.15); }
-textarea.ff-input { resize: vertical; min-height: 70px; line-height: 1.5; }
-.ff-count { font-size: 11px; color: #9099a8; margin-top: 4px; text-align: right; }
-
-.ff-color-row { display: flex; gap: 10px; align-items: center; }
-.ff-color { width: 50px; height: 42px; padding: 0; border: 1px solid #d8d8e0; border-radius: 10px; background: #fff; cursor: pointer; }
-
-.ff-restore { margin-top: 6px; border: 1px solid #e2e2ea; background: #fff; border-radius: 10px;
-  padding: 9px 14px; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; }
-.ff-restore:hover { border-color: #f0c0c0; color: #c0392b; }
-
-/* Preview */
-.ff-preview { position: sticky; top: 12px; }
-.ff-plabel { font-size: 11.5px; font-weight: 700; color: #9099a8; text-transform: uppercase;
-  letter-spacing: .05em; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-.ff-dot { width: 8px; height: 8px; border-radius: 999px; background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.18); }
-.ff-steps { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
-.ff-step { border: 1px solid #e2e2ea; background: #fff; border-radius: 999px; padding: 6px 14px;
-  font-size: 12.5px; font-weight: 700; color: #6b7280; cursor: pointer; transition: all .15s; }
-.ff-step:hover { border-color: #cfe0fc; color: #1a56c4; }
-.ff-step.on { background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff; border-color: transparent;
-  box-shadow: 0 6px 14px -6px rgba(26,115,232,.6); }
-
-.ff-frame-wrap { border: 1px solid #e2e6ee; border-radius: 18px; overflow: hidden; background: #f1f2f5;
-  box-shadow: 0 18px 50px -24px rgba(20,20,40,.45); }
-.ff-iframe { width: 100%; height: 660px; border: 0; display: block; }
-.ff-tip { font-size: 12px; color: #9099a8; margin-top: 10px; line-height: 1.5; }
-
-/* Candado Pro */
-.ff-lock { text-align: center; padding: 54px 24px; }
-.ff-lock .ic { font-size: 46px; margin-bottom: 12px; }
-.ff-lock h3 { font-size: 21px; font-weight: 800; margin: 0 0 10px; }
-.ff-lock p { font-size: 14.5px; color: #6b7280; line-height: 1.6; max-width: 480px; margin: 0 auto 22px; }
-.ff-lock .go { display: inline-block; background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff;
-  text-decoration: none; border-radius: 12px; padding: 12px 26px; font-size: 15px; font-weight: 700;
-  box-shadow: 0 12px 28px -10px rgba(26,115,232,.6); }
-
-/* Barra de guardado flotante */
-.ff-savebar { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 140%);
-  display: flex; align-items: center; gap: 16px; background: #16161a; color: #fff; padding: 12px 16px 12px 20px;
-  border-radius: 14px; box-shadow: 0 18px 44px -14px rgba(0,0,0,.55); transition: transform .25s cubic-bezier(.2,.9,.3,1);
-  z-index: 50; }
-.ff-savebar.show { transform: translate(-50%, 0); }
-.ff-savebar .msg { font-size: 13.5px; font-weight: 600; }
-.ff-savebar .acts { display: flex; gap: 9px; }
-.ff-sb-btn { border: 0; border-radius: 10px; padding: 9px 16px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
-.ff-sb-btn.discard { background: rgba(255,255,255,.12); color: #fff; }
-.ff-sb-btn.save { background: #1a73e8; color: #fff; }
-.ff-sb-btn:disabled { opacity: .55; cursor: not-allowed; }
-
-@media (max-width: 940px) {
-  .ff-grid { grid-template-columns: 1fr; }
-  .ff-preview { position: static; }
+// Campo de color: campo de texto Polaris + selector de color nativo al lado.
+function CampoColor(props: {
+  label: string;
+  details?: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <s-stack direction="inline" gap="small-200" alignItems="end">
+      <s-text-field
+        label={props.label}
+        details={props.details}
+        value={props.value}
+        onChange={(e: any) => props.onChange(e.currentTarget.value)}
+      />
+      <input
+        type="color"
+        aria-label={props.label}
+        value={props.value}
+        onChange={(e) => props.onChange(e.target.value)}
+        style={{
+          width: 44,
+          height: 34,
+          border: 0,
+          background: "none",
+          padding: 0,
+        }}
+      />
+    </s-stack>
+  );
 }
-`;
 
 export default function FormularioTienda() {
   const { formulario: inicial, hasPro } = useLoaderData<typeof loader>();
@@ -236,6 +182,12 @@ export default function FormularioTienda() {
       shopify.toast.show(fetcher.data.error, { isError: true });
     }
   }, [fetcher.data, shopify]);
+
+  // Save bar contextual de App Bridge (guía de diseño BFS).
+  useEffect(() => {
+    if (dirty) shopify.saveBar.show("formulario-save-bar");
+    else shopify.saveBar.hide("formulario-save-bar");
+  }, [dirty, shopify]);
 
   const setTexto = (parche: Partial<FormularioConfig["textos"]>) =>
     setForm((f) => ({ ...f, textos: { ...f.textos, ...parche } }));
@@ -272,243 +224,157 @@ export default function FormularioTienda() {
         Inicio
       </s-button>
 
-      <style>{CSS}</style>
+      {!hasPro ? (
+        <s-section heading="Formulario de cotización personalizable">
+          <s-stack gap="small-200">
+            <s-stack direction="inline">
+              <s-badge icon="lock" tone="info">Plan Pro</s-badge>
+            </s-stack>
+            <s-paragraph color="subdued">
+              Con el Plan Pro personalizas desde aquí los textos y la
+              apariencia del formulario de cotización, sin tocar el código del
+              tema. Mientras tanto, puedes seguir personalizándolo desde el
+              editor de temas de tu tienda.
+            </s-paragraph>
+            <s-stack direction="inline">
+              <s-button variant="primary" href="/app/plans">
+                Ver Plan Pro
+              </s-button>
+            </s-stack>
+          </s-stack>
+        </s-section>
+      ) : (
+        <>
+          <s-section heading="Textos y apariencia">
+            <s-stack gap="base">
+              <s-paragraph color="subdued">
+                Personaliza la ventana de cotización que tus clientes ven en la
+                tienda. Lo que cambies aquí manda sobre el editor de temas, y
+                lo ves al instante en la vista previa.
+              </s-paragraph>
 
-      <div className="ff-wrap">
-        <div className="ff-hero">
-          <h1>
-            Formulario de cotización 🎨
-            <span className="ff-badge">PRO</span>
-          </h1>
-          <p>
-            Personaliza la ventana de cotización que tus clientes ven en la
-            tienda. Lo que cambies aquí manda sobre el editor de temas, y lo ves
-            al instante en la vista previa de la derecha.
-          </p>
-        </div>
+              <s-heading>Textos de la ventana</s-heading>
+              <s-text-field
+                label="Título de la ventana"
+                placeholder="Solicitar cotización"
+                details={`${form.textos.tituloModal.length}/60 caracteres.`}
+                value={form.textos.tituloModal}
+                onChange={(e: any) =>
+                  setTexto({ tituloModal: e.currentTarget.value.slice(0, 60) })
+                }
+              />
+              <s-text-field
+                label="Paso 1 · Productos"
+                details="El texto de introducción del primer paso."
+                value={form.textos.leadPaso1}
+                onChange={(e: any) =>
+                  setTexto({ leadPaso1: e.currentTarget.value })
+                }
+              />
+              <s-text-field
+                label="Paso 2 · Contacto"
+                details="La pregunta que invita a dejar sus datos."
+                value={form.textos.leadPaso2}
+                onChange={(e: any) =>
+                  setTexto({ leadPaso2: e.currentTarget.value })
+                }
+              />
+              <s-text-field
+                label="Paso 3 · Revisar"
+                value={form.textos.leadPaso3}
+                onChange={(e: any) =>
+                  setTexto({ leadPaso3: e.currentTarget.value })
+                }
+              />
+              <s-text-area
+                label="Mensaje de éxito"
+                details="Lo que ve el cliente al enviar su solicitud."
+                rows={3}
+                value={form.textos.mensajeExito}
+                onChange={(e: any) =>
+                  setTexto({ mensajeExito: e.currentTarget.value })
+                }
+              />
 
-        {!hasPro ? (
-          <div className="ff-card">
-            <div className="ff-lock">
-              <div className="ic">🔒</div>
-              <h3>Disponible en el Plan Pro</h3>
-              <p>
-                Con el Plan Pro personalizas desde aquí los textos y la
-                apariencia del formulario de cotización, sin tocar el código del
-                tema. Mientras tanto, puedes seguir personalizándolo desde el
-                editor de temas de tu tienda.
-              </p>
-              <a className="go" href="/app/plans">
-                Ver Plan Pro →
-              </a>
-            </div>
-          </div>
-        ) : (
-          <div className="ff-grid">
-            {/* ---------- Editor ---------- */}
-            <div className="ff-card">
-              <h2>Textos y apariencia</h2>
-              <p className="sub">
-                Ajusta cada texto y color. La vista previa se actualiza mientras
-                escribes.
-              </p>
+              <s-heading>Apariencia</s-heading>
+              <s-text-field
+                label="Texto del botón"
+                placeholder="Solicitar cotización"
+                value={form.apariencia.textoBoton}
+                onChange={(e: any) =>
+                  setApar({ textoBoton: e.currentTarget.value.slice(0, 40) })
+                }
+              />
+              <CampoColor
+                label="Color de acento de la ventana"
+                details="Encabezado, pasos y botones del modal."
+                value={form.apariencia.colorAcento}
+                onChange={(v) => setApar({ colorAcento: v })}
+              />
+              <CampoColor
+                label="Fondo del botón"
+                value={form.apariencia.botonBg}
+                onChange={(v) => setApar({ botonBg: v })}
+              />
+              <CampoColor
+                label="Color del texto del botón"
+                value={form.apariencia.botonTextoColor}
+                onChange={(v) => setApar({ botonTextoColor: v })}
+              />
 
-              <div className="ff-sec">📝 Textos de la ventana</div>
+              <s-stack direction="inline">
+                <s-button
+                  variant="tertiary"
+                  onClick={() => setForm(DEFAULT_FORMULARIO)}
+                >
+                  Restaurar valores por defecto
+                </s-button>
+              </s-stack>
+            </s-stack>
+          </s-section>
 
-              <div className="ff-field">
-                <label className="ff-label">Título de la ventana</label>
-                <input
-                  className="ff-input"
-                  placeholder="Solicitar cotización"
-                  maxLength={60}
-                  value={form.textos.tituloModal}
-                  onChange={(e) => setTexto({ tituloModal: e.target.value })}
-                />
-                <span className="ff-count">
-                  {form.textos.tituloModal.length}/60
-                </span>
-              </div>
-
-              <div className="ff-field">
-                <label className="ff-label">Paso 1 · Productos</label>
-                <span className="ff-hint">
-                  El texto de introducción del primer paso.
-                </span>
-                <input
-                  className="ff-input"
-                  value={form.textos.leadPaso1}
-                  onChange={(e) => setTexto({ leadPaso1: e.target.value })}
-                />
-              </div>
-
-              <div className="ff-field">
-                <label className="ff-label">Paso 2 · Contacto</label>
-                <span className="ff-hint">
-                  La pregunta que invita a dejar sus datos.
-                </span>
-                <input
-                  className="ff-input"
-                  value={form.textos.leadPaso2}
-                  onChange={(e) => setTexto({ leadPaso2: e.target.value })}
-                />
-              </div>
-
-              <div className="ff-field">
-                <label className="ff-label">Paso 3 · Revisar</label>
-                <input
-                  className="ff-input"
-                  value={form.textos.leadPaso3}
-                  onChange={(e) => setTexto({ leadPaso3: e.target.value })}
-                />
-              </div>
-
-              <div className="ff-field">
-                <label className="ff-label">Mensaje de éxito</label>
-                <span className="ff-hint">
-                  Lo que ve el cliente al enviar su solicitud.
-                </span>
-                <textarea
-                  className="ff-input"
-                  value={form.textos.mensajeExito}
-                  onChange={(e) => setTexto({ mensajeExito: e.target.value })}
-                />
-              </div>
-
-              <div className="ff-sec">🎨 Apariencia</div>
-
-              <div className="ff-field">
-                <label className="ff-label">Texto del botón</label>
-                <input
-                  className="ff-input"
-                  placeholder="Solicitar cotización"
-                  maxLength={40}
-                  value={form.apariencia.textoBoton}
-                  onChange={(e) => setApar({ textoBoton: e.target.value })}
-                />
-              </div>
-
-              <div className="ff-field">
-                <label className="ff-label">Color de acento de la ventana</label>
-                <span className="ff-hint">
-                  Encabezado, pasos y botones del modal.
-                </span>
-                <div className="ff-color-row">
-                  <input
-                    type="color"
-                    className="ff-color"
-                    value={form.apariencia.colorAcento}
-                    onChange={(e) => setApar({ colorAcento: e.target.value })}
-                  />
-                  <input
-                    className="ff-input"
-                    value={form.apariencia.colorAcento}
-                    onChange={(e) => setApar({ colorAcento: e.target.value })}
-                    style={{ maxWidth: 140 }}
-                  />
-                </div>
-              </div>
-
-              <div className="ff-field">
-                <label className="ff-label">Fondo del botón</label>
-                <div className="ff-color-row">
-                  <input
-                    type="color"
-                    className="ff-color"
-                    value={form.apariencia.botonBg}
-                    onChange={(e) => setApar({ botonBg: e.target.value })}
-                  />
-                  <input
-                    className="ff-input"
-                    value={form.apariencia.botonBg}
-                    onChange={(e) => setApar({ botonBg: e.target.value })}
-                    style={{ maxWidth: 140 }}
-                  />
-                </div>
-              </div>
-
-              <div className="ff-field">
-                <label className="ff-label">Color del texto del botón</label>
-                <div className="ff-color-row">
-                  <input
-                    type="color"
-                    className="ff-color"
-                    value={form.apariencia.botonTextoColor}
-                    onChange={(e) =>
-                      setApar({ botonTextoColor: e.target.value })
-                    }
-                  />
-                  <input
-                    className="ff-input"
-                    value={form.apariencia.botonTextoColor}
-                    onChange={(e) =>
-                      setApar({ botonTextoColor: e.target.value })
-                    }
-                    style={{ maxWidth: 140 }}
-                  />
-                </div>
-              </div>
-
-              <button
-                className="ff-restore"
-                onClick={() => setForm(DEFAULT_FORMULARIO)}
-              >
-                ↺ Restaurar valores por defecto
-              </button>
-            </div>
-
-            {/* ---------- Preview fiel ---------- */}
-            <div className="ff-preview">
-              <div className="ff-plabel">
-                <span className="ff-dot" />
-                Vista previa · como se ve en tu tienda
-              </div>
-              <div className="ff-steps">
+          <s-section heading="Vista previa · como se ve en tu tienda">
+            <s-stack gap="base">
+              <s-stack direction="inline" gap="small-200">
                 {PASOS.map((p) => (
-                  <button
+                  <s-button
                     key={String(p.id)}
-                    className={`ff-step ${paso === p.id ? "on" : ""}`}
+                    variant={paso === p.id ? "primary" : "secondary"}
                     onClick={() => setPaso(p.id)}
                   >
                     {p.label}
-                  </button>
+                  </s-button>
                 ))}
-              </div>
-              <div className="ff-frame-wrap">
-                <iframe
-                  className="ff-iframe"
-                  title="Vista previa del formulario"
-                  srcDoc={preview}
-                />
-              </div>
-              <p className="ff-tip">
-                💡 Usa los botones de arriba para recorrer cada paso del modal,
+              </s-stack>
+              <iframe
+                title="Vista previa del formulario"
+                srcDoc={preview}
+                style={{
+                  width: "100%",
+                  height: 660,
+                  border: "1px solid #e3e3e3",
+                  borderRadius: 8,
+                  background: "#f1f2f5",
+                }}
+              />
+              <s-text color="subdued">
+                Usa los botones de arriba para recorrer cada paso del modal,
                 igual que lo verán tus clientes en la tienda.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
+              </s-text>
+            </s-stack>
+          </s-section>
+        </>
+      )}
 
-      {/* Barra de guardado flotante */}
-      <div className={`ff-savebar ${dirty ? "show" : ""}`}>
-        <span className="msg">Tienes cambios sin guardar</span>
-        <div className="acts">
-          <button
-            className="ff-sb-btn discard"
-            onClick={descartar}
-            disabled={guardando}
-          >
-            Descartar
-          </button>
-          <button
-            className="ff-sb-btn save"
-            onClick={guardar}
-            disabled={guardando}
-          >
-            {guardando ? "Guardando…" : "Guardar cambios"}
-          </button>
-        </div>
-      </div>
+      {/* Save bar contextual de App Bridge (aparece cuando hay cambios). */}
+      <ui-save-bar id="formulario-save-bar">
+        <button
+          {...({ variant: "primary" } as any)}
+          onClick={guardar}
+          disabled={guardando}
+        ></button>
+        <button onClick={descartar} disabled={guardando}></button>
+      </ui-save-bar>
     </s-page>
   );
 }

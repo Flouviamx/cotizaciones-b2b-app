@@ -38,16 +38,15 @@ function estadoLegible(status: string) {
   }
 }
 
-function estadoClase(status: string) {
+// Tono del badge de Polaris según el estado de la cotización.
+function estadoTone(status: string): "info" | "caution" | "success" {
   switch (status) {
-    case "OPEN":
-      return "open";
-    case "INVOICE_SENT":
-      return "sent";
     case "COMPLETED":
-      return "paid";
+      return "success";
+    case "INVOICE_SENT":
+      return "caution";
     default:
-      return "open";
+      return "info";
   }
 }
 
@@ -130,71 +129,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return { created: json.data?.draftOrderCreate?.draftOrder };
 };
 
-const CSS = `
-.dq-wrap { max-width: 1040px; margin: 0 auto; padding: 8px 16px 40px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; color: #1a1a2e; }
-/* 3 cards de conteo (chicas) + "Pendiente de cobro" (accent) al doble de ancho */
-.dq-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 8px 0 22px; }
-.dq-stat { background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 14px 16px; }
-.dq-stat .lbl { font-size: 12.5px; color: #6b7280; font-weight: 600; }
-.dq-stat .num { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; margin-top: 4px; }
-.dq-stat.accent { grid-column: span 2; border-color: #cfe0fc;
-  background: linear-gradient(135deg, #f5f9ff, #eef5ff); padding: 16px 20px; }
-.dq-stat.accent .lbl { font-size: 13px; }
-.dq-stat.accent .num { color: #1a56c4; }
-/* Monto: escala con el ancho de la card para que cifras grandes no se desborden */
-.dq-stat .num.money { font-size: clamp(20px, 2.6vw, 29px); line-height: 1.15;
-  display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
-  font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.dq-stat .num.money .cur { font-size: 12px; font-weight: 700; color: #6b7280;
-  letter-spacing: 0; }
-
-.dq-banner { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; border-radius: 14px;
-  padding: 14px 16px; margin-bottom: 18px; font-size: 14px; }
-.dq-banner b { display: block; margin-bottom: 2px; }
-.dq-banner a { text-decoration: underline; }
-.dq-usage { font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 16px;
-  background: #f5f9ff; border: 1px solid #cfe0fc; border-radius: 10px; padding: 8px 12px; }
-.dq-usage a { text-decoration: none; }
-.dq-usage a:hover { text-decoration: underline; }
-
-.dq-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
-.dq-bar select, .dq-bar input { padding: 10px 12px; border: 1px solid #d8d8e0; border-radius: 10px;
-  font-size: 14px; background: #fff; color: #1a1a2e; outline: none; }
-.dq-bar select:focus, .dq-bar input:focus { border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,.15); }
-.dq-bar input { flex: 1; min-width: 200px; }
-.dq-count { color: #6b7280; font-size: 13px; font-weight: 600; }
-
-.dq-list { display: grid; gap: 12px; }
-.dq-quote { background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 16px 18px;
-  transition: box-shadow .15s ease, transform .15s ease; }
-.dq-quote:hover { box-shadow: 0 6px 20px -8px rgba(0,0,0,.15); transform: translateY(-1px); }
-.dq-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.dq-title { font-size: 15px; font-weight: 700; margin-right: 4px; }
-.dq-meta { color: #6b7280; font-size: 13px; margin-top: 6px; }
-.dq-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
-.dq-badge.open { background: #e8f0fe; color: #1a56c4; }
-.dq-badge.sent { background: #fef3c7; color: #92400e; }
-.dq-badge.paid { background: #dcfce7; color: #15803d; }
-.dq-badge.store { background: #f3e8ff; color: #6b21a8; }
-.dq-badge.inv { background: #dcfce7; color: #15803d; }
-.dq-detail { margin-top: 12px; background: transparent; border: 0; color: #1a73e8;
-  font-weight: 700; font-size: 14px; cursor: pointer; padding: 0; }
-.dq-detail:hover { text-decoration: underline; }
-
-.dq-empty { text-align: center; color: #6b7280; padding: 44px 20px; border: 1px dashed #d8d8e0;
-  border-radius: 14px; background: #fafafb; }
-.dq-example { margin-top: 20px; text-align: center; }
-.dq-example button { background: transparent; border: 1px solid #d8d8e0; border-radius: 10px;
-  padding: 8px 14px; font-size: 13px; color: #6b7280; cursor: pointer; }
-.dq-example button:hover { border-color: #b8b8c4; }
-
-@media (max-width: 600px) {
-  .dq-stats { grid-template-columns: repeat(2, 1fr); }
-  .dq-stat.accent { grid-column: span 2; }
-}
-`;
-
 export default function Index() {
   const { quotes, limite } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
@@ -260,171 +194,185 @@ export default function Index() {
         Nueva cotización
       </s-button>
 
-      <style>{CSS}</style>
+      {/* Aviso de límite del Plan Gratis */}
+      {!limite.paid && limite.bloqueado ? (
+        <s-banner
+          tone="warning"
+          heading={`Llegaste al límite del Plan Gratis (${limite.limite} cotizaciones activas)`}
+        >
+          <s-paragraph>
+            Marca cotizaciones como pagadas para liberar espacio, o{" "}
+            <s-link onClick={() => navigate("/app/plans")}>
+              mejora tu plan
+            </s-link>{" "}
+            para cotizaciones ilimitadas.
+          </s-paragraph>
+        </s-banner>
+      ) : null}
 
-      <div className="dq-wrap">
-        {/* Resumen */}
-        <div className="dq-stats">
-          <div className="dq-stat">
-            <div className="lbl">Abiertas</div>
-            <div className="num">{abiertas}</div>
-          </div>
-          <div className="dq-stat">
-            <div className="lbl">Enviadas</div>
-            <div className="num">{enviadas}</div>
-          </div>
-          <div className="dq-stat">
-            <div className="lbl">Pagadas</div>
-            <div className="num">{pagadas}</div>
-          </div>
-          <div className="dq-stat accent">
-            <div className="lbl">Pendiente de cobro</div>
-            <div className="num money">
-              {formatoMoneda(valorPendiente, moneda)}
-              {moneda ? <span className="cur">{moneda}</span> : null}
-            </div>
-          </div>
-        </div>
+      {/* Aviso de solicitudes de la tienda */}
+      {pendientesTienda > 0 ? (
+        <s-banner
+          tone="info"
+          heading={`Tienes ${pendientesTienda} solicitud(es) de la tienda pendientes de atender`}
+        >
+          <s-paragraph>
+            Asígnales precio y envía el link de pago al cliente.
+          </s-paragraph>
+        </s-banner>
+      ) : null}
 
-        {/* Plan Gratis: uso y aviso de límite */}
-        {!limite.paid ? (
-          limite.bloqueado ? (
-            <div className="dq-banner">
-              <b>
-                Llegaste al límite del Plan Gratis ({limite.limite} cotizaciones
-                activas)
-              </b>
-              Marca cotizaciones como pagadas para liberar espacio, o{" "}
-              <a href="/app/plans" style={{ color: "#9a3412", fontWeight: 700 }}>
-                mejora tu plan
-              </a>{" "}
-              para cotizaciones ilimitadas.
-            </div>
-          ) : (
-            <div className="dq-usage">
+      {/* Resumen */}
+      <s-section accessibilityLabel="Resumen de cotizaciones">
+        <s-grid
+          gridTemplateColumns="repeat(auto-fit, minmax(150px, 1fr))"
+          gap="base"
+        >
+          <s-stack gap="small-300">
+            <s-text color="subdued">Abiertas</s-text>
+            <s-heading>{`${abiertas}`}</s-heading>
+          </s-stack>
+          <s-stack gap="small-300">
+            <s-text color="subdued">Enviadas</s-text>
+            <s-heading>{`${enviadas}`}</s-heading>
+          </s-stack>
+          <s-stack gap="small-300">
+            <s-text color="subdued">Pagadas</s-text>
+            <s-heading>{`${pagadas}`}</s-heading>
+          </s-stack>
+          <s-stack gap="small-300">
+            <s-text color="subdued">Pendiente de cobro</s-text>
+            <s-heading>{formatoMoneda(valorPendiente, moneda)}</s-heading>
+          </s-stack>
+        </s-grid>
+        {!limite.paid && !limite.bloqueado ? (
+          <s-box paddingBlockStart="base">
+            <s-text color="subdued">
               Plan Gratis · {limite.activas} de {limite.limite} cotizaciones
               activas ·{" "}
-              <a href="/app/plans" style={{ color: "#1a56c4", fontWeight: 700 }}>
-                Mejorar plan
-              </a>
-            </div>
-          )
+            </s-text>
+            <s-link onClick={() => navigate("/app/plans")}>Mejorar plan</s-link>
+          </s-box>
         ) : null}
+      </s-section>
 
-        {/* Aviso de solicitudes de la tienda */}
-        {pendientesTienda > 0 ? (
-          <div className="dq-banner">
-            <b>
-              Tienes {pendientesTienda} solicitud(es) de la tienda pendientes
-              de atender
-            </b>
-            Asígnales precio y envía el link de pago al cliente.
-          </div>
-        ) : null}
+      {/* Lista con filtros */}
+      <s-section accessibilityLabel="Lista de cotizaciones" padding="none">
+        <s-box padding="base">
+          <s-stack direction="inline" gap="base" alignItems="end">
+            <s-select
+              label="Estado"
+              value={statusFilter}
+              onChange={(e: any) => setStatusFilter(e.currentTarget.value)}
+            >
+              <s-option value="">Todas</s-option>
+              <s-option value="OPEN">Abiertas</s-option>
+              <s-option value="INVOICE_SENT">Enviadas</s-option>
+              <s-option value="COMPLETED">Pagadas</s-option>
+            </s-select>
+            <s-search-field
+              label="Buscar"
+              placeholder="Cliente, solicitante o número…"
+              value={search}
+              onInput={(e: any) => setSearch(e.currentTarget.value)}
+            />
+            <s-text color="subdued">
+              {filtradas.length} de {quotes.length}
+            </s-text>
+          </s-stack>
+        </s-box>
 
-        {/* Filtros */}
-        <div className="dq-bar">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">Todas</option>
-            <option value="OPEN">Abiertas</option>
-            <option value="INVOICE_SENT">Enviadas</option>
-            <option value="COMPLETED">Pagadas</option>
-          </select>
-          <input
-            type="text"
-            placeholder="Buscar por cliente, solicitante o número…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <span className="dq-count">
-            {filtradas.length} de {quotes.length}
-          </span>
-        </div>
-
-        {/* Lista */}
         {quotes.length === 0 ? (
-          <div className="dq-empty">
-            Aún no tienes cotizaciones. Crea una con "Nueva cotización".
-          </div>
+          <s-box padding="large">
+            <s-stack gap="small-200" alignItems="center">
+              <s-paragraph color="subdued">
+                Aún no tienes cotizaciones. Crea una con "Nueva cotización".
+              </s-paragraph>
+            </s-stack>
+          </s-box>
         ) : filtradas.length === 0 ? (
-          <div className="dq-empty">
-            No hay cotizaciones que coincidan con el filtro o la búsqueda.
-          </div>
+          <s-box padding="large">
+            <s-paragraph color="subdued">
+              No hay cotizaciones que coincidan con el filtro o la búsqueda.
+            </s-paragraph>
+          </s-box>
         ) : (
-          <div className="dq-list">
-            {filtradas.map((q: any) => {
-              const solicitante = (q.customAttributes ?? []).find(
-                (a: any) => a.key === "Solicitante",
-              )?.value;
-              const nombre =
-                q.customer?.displayName ?? solicitante ?? "Sin cliente";
-              const desdeTienda = (q.customAttributes ?? []).some(
-                (a: any) => a.key === "Origen",
-              );
-              const facturado = (q.customAttributes ?? []).some(
-                (a: any) => a.key === "CFDI UUID" && a.value,
-              );
-              const terminos = (q.customAttributes ?? []).find(
-                (a: any) => a.key === "Términos de crédito",
-              )?.value;
-              const fecha = q.createdAt
-                ? new Date(q.createdAt).toLocaleDateString("es-MX")
-                : "";
-              const numericId = q.id.split("/").pop();
-              return (
-                <div className="dq-quote" key={q.id}>
-                  <div className="dq-top">
-                    <span className="dq-title">{q.name}</span>
-                    <span>— {nombre}</span>
-                    <span className={`dq-badge ${estadoClase(q.status)}`}>
-                      {estadoLegible(q.status)}
-                    </span>
-                    {desdeTienda ? (
-                      <span className="dq-badge store">Desde la tienda</span>
-                    ) : null}
-                    {facturado ? (
-                      <span className="dq-badge inv">Facturado</span>
-                    ) : null}
-                  </div>
-                  <div className="dq-meta">
-                    Total:{" "}
-                    {formatoMoneda(
-                      q.totalPriceSet.shopMoney.amount,
-                      q.totalPriceSet.shopMoney.currencyCode,
-                    )}{" "}
-                    {q.totalPriceSet.shopMoney.currencyCode}
-                    {terminos ? `  ·  ${terminos}` : ""}
-                    {fecha ? `  ·  ${fecha}` : ""}
-                  </div>
-                  <button
-                    className="dq-detail"
-                    onClick={() => navigate(`/app/quotes/${numericId}`)}
-                  >
-                    Ver detalle →
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+          <s-table>
+            <s-table-header-row>
+              <s-table-header>Cotización</s-table-header>
+              <s-table-header>Cliente</s-table-header>
+              <s-table-header>Estado</s-table-header>
+              <s-table-header>Total</s-table-header>
+              <s-table-header>Fecha</s-table-header>
+            </s-table-header-row>
+            <s-table-body>
+              {filtradas.map((q: any) => {
+                const solicitante = (q.customAttributes ?? []).find(
+                  (a: any) => a.key === "Solicitante",
+                )?.value;
+                const nombre =
+                  q.customer?.displayName ?? solicitante ?? "Sin cliente";
+                const desdeTienda = (q.customAttributes ?? []).some(
+                  (a: any) => a.key === "Origen",
+                );
+                const facturado = (q.customAttributes ?? []).some(
+                  (a: any) => a.key === "CFDI UUID" && a.value,
+                );
+                const fecha = q.createdAt
+                  ? new Date(q.createdAt).toLocaleDateString("es-MX")
+                  : "";
+                const numericId = q.id.split("/").pop();
+                return (
+                  <s-table-row key={q.id}>
+                    <s-table-cell>
+                      <s-link
+                        onClick={() => navigate(`/app/quotes/${numericId}`)}
+                      >
+                        {q.name}
+                      </s-link>
+                    </s-table-cell>
+                    <s-table-cell>{nombre}</s-table-cell>
+                    <s-table-cell>
+                      <s-stack direction="inline" gap="small-300">
+                        <s-badge tone={estadoTone(q.status)}>
+                          {estadoLegible(q.status)}
+                        </s-badge>
+                        {desdeTienda ? (
+                          <s-badge tone="info">Desde la tienda</s-badge>
+                        ) : null}
+                        {facturado ? (
+                          <s-badge tone="success">Facturado</s-badge>
+                        ) : null}
+                      </s-stack>
+                    </s-table-cell>
+                    <s-table-cell>
+                      {formatoMoneda(
+                        q.totalPriceSet.shopMoney.amount,
+                        q.totalPriceSet.shopMoney.currencyCode,
+                      )}
+                    </s-table-cell>
+                    <s-table-cell>{fecha}</s-table-cell>
+                  </s-table-row>
+                );
+              })}
+            </s-table-body>
+          </s-table>
         )}
 
         {/* Botón de prueba (dev) */}
-        <div className="dq-example">
-          <button
+        <s-box padding="base">
+          <s-button
+            variant="tertiary"
             onClick={crearCotizacion}
             disabled={isLoading || limite.bloqueado}
+            loading={isLoading}
           >
-            {isLoading
-              ? "Creando…"
-              : limite.bloqueado
-                ? "Límite del Plan Gratis alcanzado"
-                : "Crear cotización de ejemplo (para probar)"}
-          </button>
-        </div>
-      </div>
+            {limite.bloqueado
+              ? "Límite del Plan Gratis alcanzado"
+              : "Crear cotización de ejemplo (para probar)"}
+          </s-button>
+        </s-box>
+      </s-section>
     </s-page>
   );
 }

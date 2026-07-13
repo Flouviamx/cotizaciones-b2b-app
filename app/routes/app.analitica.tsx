@@ -112,200 +112,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
-const CSS = `
-.an-wrap { max-width: 1040px; margin: 0 auto; padding: 8px 16px 48px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; color: #1a1a2e; }
-
-.an-hero { position: relative; overflow: hidden; border-radius: 20px; padding: 26px 28px;
-  background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff;
-  box-shadow: 0 14px 34px -12px rgba(26,115,232,.5); margin: 8px 0 22px; }
-.an-hero::after { content: ""; position: absolute; top: -60px; right: -40px; width: 220px; height: 220px;
-  background: rgba(255,255,255,.12); border-radius: 50%; }
-.an-hero h1 { font-size: 26px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.02em; position: relative; }
-.an-hero p { font-size: 15px; margin: 0; opacity: .92; position: relative; max-width: 560px; }
-
-/* Filtro de rango */
-.an-range { display: inline-flex; gap: 4px; background: #fff; border: 1px solid #e2e2ea;
-  border-radius: 12px; padding: 4px; margin-bottom: 20px; }
-.an-range button { border: 0; background: transparent; border-radius: 9px; padding: 8px 15px;
-  font-size: 13px; font-weight: 700; color: #6b7280; cursor: pointer; transition: all .15s; }
-.an-range button.on { background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff;
-  box-shadow: 0 6px 14px -7px rgba(26,115,232,.6); }
-.an-range button:not(.on):hover { color: #1a56c4; }
-
-/* KPI cards */
-.an-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 24px; }
-.an-kpi { background: #fff; border: 1px solid #ececf0; border-radius: 16px; padding: 18px 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.04); position: relative; overflow: hidden; }
-.an-kpi .ic { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center;
-  justify-content: center; font-size: 18px; background: linear-gradient(135deg, #e8f0fe, #eaf1fd); margin-bottom: 12px; }
-.an-kpi .lbl { font-size: 13px; color: #6b7280; font-weight: 600; }
-.an-kpi .num { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin-top: 3px; }
-.an-kpi.accent { border-color: #cfe0fc; background: linear-gradient(135deg, #f6faff, #eef5ff); }
-.an-kpi.accent .num { color: #1a56c4; }
-.an-kpi.good { border-color: #bbf7d0; background: linear-gradient(135deg, #f3fdf6, #ecfdf2); }
-.an-kpi.good .num { color: #15803d; }
-.an-kpi.good .ic { background: linear-gradient(135deg, #dcfce7, #d1fae5); }
-
-/* Chip de variación vs periodo anterior */
-.an-delta { display: inline-flex; align-items: center; gap: 3px; margin-top: 7px;
-  font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
-.an-delta.up { color: #15803d; background: #dcfce7; }
-.an-delta.down { color: #b91c1c; background: #fee2e2; }
-.an-delta.flat { color: #6b7280; background: #eef0f4; }
-.an-delta .prev { font-weight: 600; opacity: .75; }
-
-/* Franja de insights */
-.an-insights { display: grid; gap: 10px; margin: 0 0 22px; }
-.an-insight { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-radius: 14px;
-  font-size: 14px; font-weight: 600; line-height: 1.4; border: 1px solid; }
-.an-insight .ic { font-size: 20px; flex: 0 0 auto; }
-.an-insight.good { background: linear-gradient(135deg, #f3fdf6, #ecfdf2); border-color: #bbf7d0; color: #14532d; }
-.an-insight.warn { background: linear-gradient(135deg, #fffbeb, #fef9ec); border-color: #fde68a; color: #92400e; }
-.an-insight.info { background: linear-gradient(135deg, #f6faff, #eef5ff); border-color: #cfe0fc; color: #1e3a8a; }
-.an-insight b { font-weight: 850; }
-
-/* Toolbar (rango + exportar) */
-.an-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  flex-wrap: wrap; margin-bottom: 20px; }
-.an-export { display: inline-flex; gap: 8px; }
-.an-export button { border: 1px solid #e2e2ea; background: #fff; border-radius: 10px; padding: 8px 14px;
-  font-size: 13px; font-weight: 700; color: #374151; cursor: pointer; transition: all .15s;
-  display: inline-flex; align-items: center; gap: 6px; }
-.an-export button:hover { border-color: #1a73e8; color: #1a56c4; background: #f6faff; }
-
-/* Cotizaciones estancadas */
-.an-stuck { background: linear-gradient(135deg, #fffaf3, #fff6ea); border: 1px solid #fde0b2;
-  border-radius: 18px; padding: 20px 22px; margin-bottom: 24px; }
-.an-stuck.zero { background: linear-gradient(135deg, #f3fdf6, #ecfdf2); border-color: #bbf7d0; }
-.an-stuck h3 { font-size: 15px; font-weight: 800; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
-.an-stuck .sub { font-size: 13px; color: #6b7280; margin: 0 0 16px; font-weight: 600; }
-.an-stuck .risk { color: #b45309; font-weight: 850; }
-.an-stuck-list { display: grid; gap: 8px; }
-.an-stuck-row { display: flex; align-items: center; gap: 12px; padding: 11px 13px; background: #fff;
-  border: 1px solid #f1e4cf; border-radius: 12px; cursor: pointer; transition: all .15s; }
-.an-stuck-row:hover { border-color: #f59e0b; box-shadow: 0 4px 12px -6px rgba(245,158,11,.4); transform: translateY(-1px); }
-.an-stuck-row .nm { font-size: 13.5px; font-weight: 750; }
-.an-stuck-row .cli { font-size: 12.5px; color: #6b7280; font-weight: 600; }
-.an-stuck-row .age { margin-left: auto; font-size: 12px; font-weight: 800; color: #b45309;
-  background: #fef3c7; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
-.an-stuck-row .am { font-size: 13.5px; font-weight: 800; min-width: 88px; text-align: right; }
-
-/* Tendencia apilada (cotizado vs cobrado) */
-.an-legend { display: flex; gap: 16px; margin: -6px 0 14px; font-size: 12px; font-weight: 700; color: #6b7280; }
-.an-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.an-legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
-.an-legend i.blue { background: linear-gradient(135deg, #4285f4, #1a73e8); }
-.an-legend i.green { background: linear-gradient(135deg, #22c55e, #16a34a); }
-.an-tchart { display: flex; align-items: flex-end; gap: 8px; height: 180px; padding-top: 22px; }
-.an-tcol { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; min-width: 0; }
-.an-tbar { width: 100%; max-width: 40px; border-radius: 7px 7px 0 0; min-height: 3px; position: relative;
-  background: linear-gradient(180deg, #5a9bff, #1a73e8); transition: height .7s cubic-bezier(.2,.8,.3,1);
-  display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
-.an-tbar .cob { width: 100%; background: linear-gradient(180deg, #22c55e, #16a34a); transition: height .7s cubic-bezier(.2,.8,.3,1); }
-.an-tbar .cap { position: absolute; top: -19px; left: -8px; right: -8px; text-align: center;
-  font-size: 10.5px; font-weight: 800; color: #1a56c4; white-space: nowrap; }
-.an-tlbl { font-size: 11px; color: #9099a8; font-weight: 700; text-transform: capitalize; }
-
-/* CFDI cuota */
-.an-cfdi .row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
-.an-cfdi .big { font-size: 26px; font-weight: 850; letter-spacing: -0.02em; }
-.an-cfdi .big small { font-size: 15px; font-weight: 700; color: #9099a8; }
-.an-cfdi .plan { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em;
-  color: #1a56c4; background: #eef3ff; border-radius: 999px; padding: 4px 11px; }
-.an-cfdi .track { height: 12px; background: #eef0f4; border-radius: 999px; overflow: hidden; margin: 6px 0 10px; }
-.an-cfdi .track span { display: block; height: 100%; border-radius: 999px; transition: width .7s cubic-bezier(.2,.8,.3,1); }
-.an-cfdi .track span.ok { background: linear-gradient(90deg, #16a34a, #22c55e); }
-.an-cfdi .track span.warn { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-.an-cfdi .track span.full { background: linear-gradient(90deg, #dc2626, #ef4444); }
-.an-cfdi .note { font-size: 12.5px; color: #6b7280; font-weight: 600; }
-.an-cfdi .note b { color: #b45309; }
-
-.an-section-title { font-size: 18px; font-weight: 750; margin: 4px 0 14px; letter-spacing: -0.01em; }
-.an-section-title.sep { margin-top: 30px; }
-.an-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
-.an-card { background: #fff; border: 1px solid #ececf0; border-radius: 18px; padding: 22px 24px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.04); }
-.an-card h3 { font-size: 15px; font-weight: 750; margin: 0 0 18px; display: flex; align-items: center; gap: 8px; }
-
-/* Embudo de estados */
-.an-funnel { display: grid; gap: 14px; }
-.an-frow .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-.an-frow .top .nm { font-size: 13.5px; font-weight: 700; }
-.an-frow .top .vl { font-size: 13px; color: #6b7280; font-weight: 700; }
-.an-bar { height: 12px; background: #eef0f4; border-radius: 999px; overflow: hidden; }
-.an-bar span { display: block; height: 100%; border-radius: 999px; transition: width .7s cubic-bezier(.2,.8,.3,1); }
-.an-bar span.open { background: linear-gradient(90deg, #1a73e8, #4285f4); }
-.an-bar span.sent { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-.an-bar span.paid { background: linear-gradient(90deg, #16a34a, #22c55e); }
-
-/* Tendencia por mes */
-.an-chart { display: flex; align-items: flex-end; gap: 10px; height: 170px; padding-top: 10px; }
-.an-chart .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
-.an-chart .col .bar { width: 100%; max-width: 42px; border-radius: 8px 8px 0 0;
-  background: linear-gradient(180deg, #4285f4, #1a73e8); transition: height .7s cubic-bezier(.2,.8,.3,1);
-  min-height: 3px; position: relative; }
-.an-chart .col .bar .cap { position: absolute; top: -19px; left: 0; right: 0; text-align: center;
-  font-size: 11.5px; font-weight: 800; color: #1a56c4; }
-.an-chart .col .mlbl { font-size: 11.5px; color: #9099a8; font-weight: 700; text-transform: capitalize; }
-
-/* Top clientes */
-.an-top { display: grid; gap: 10px; }
-.an-top-row { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid #f1f1f4;
-  border-radius: 12px; }
-.an-top-row .rk { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 999px; background: #eef3ff;
-  color: #1a56c4; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-.an-top-row .rk.gold { background: #fef3c7; color: #92400e; }
-.an-top-row .nm { font-size: 13.5px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden;
-  text-overflow: ellipsis; white-space: nowrap; }
-.an-top-row .meta { font-size: 12px; color: #9099a8; font-weight: 600; }
-.an-top-row .am { font-size: 13.5px; font-weight: 800; margin-left: auto; }
-
-/* Distribución (productos / empresas / términos) con barra */
-.an-dist { display: grid; gap: 12px; }
-.an-drow .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; }
-.an-drow .nm { font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.an-drow .vl { font-size: 13px; color: #6b7280; font-weight: 700; white-space: nowrap; }
-.an-drow .vl b { color: #1a1a2e; }
-.an-dbar { height: 10px; background: #eef0f4; border-radius: 999px; overflow: hidden; }
-.an-dbar span { display: block; height: 100%; border-radius: 999px;
-  background: linear-gradient(90deg, #1a73e8, #4285f4); transition: width .7s cubic-bezier(.2,.8,.3,1); }
-.an-dbar span.alt { background: linear-gradient(90deg, #7c3aed, #a855f7); }
-.an-mini { text-align: center; color: #9099a8; padding: 18px 12px; font-size: 13px; font-weight: 600; }
-
-.an-empty { text-align: center; color: #6b7280; padding: 30px 16px; border: 1px dashed #d8d8e0;
-  border-radius: 14px; background: #fafafb; font-size: 14px; }
-
-/* Forzar impresión de colores/degradados (barras, KPIs, embudo, etc.) */
-.an-hero, .an-kpi .ic, .an-bar span, .an-tbar, .an-tbar .cob, .an-dbar span,
-.an-cfdi .track span, .an-delta, .an-insight, .an-kpi.good, .an-kpi.accent {
-  -webkit-print-color-adjust: exact; print-color-adjust: exact;
-}
-
-@media print {
-  .an-noprint { display: none !important; }
-  .an-hero { box-shadow: none; }
-  .an-card, .an-kpi, .an-stuck { break-inside: avoid; }
-}
-
-/* Teaser Pro (sin plan) */
-.an-lock { background: linear-gradient(135deg, #f7faff, #eef5ff); border: 1px solid #cfe0fc;
-  border-radius: 20px; padding: 40px 32px; text-align: center; }
-.an-lock .ic { font-size: 46px; margin-bottom: 14px; }
-.an-lock .t { font-size: 20px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.02em; }
-.an-lock .d { font-size: 14.5px; color: #4b5563; line-height: 1.6; max-width: 480px; margin: 0 auto 22px; }
-.an-lock .feats { display: grid; gap: 10px; max-width: 380px; margin: 0 auto 24px; text-align: left;
-  list-style: none; padding: 0; }
-.an-lock .feats li { display: flex; gap: 9px; font-size: 14px; color: #374151; }
-.an-lock .feats .chk { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; background: #dcfce7;
-  color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
-.an-lock .cta { border: 0; border-radius: 12px; padding: 13px 28px; font-size: 15px; font-weight: 800;
-  cursor: pointer; color: #fff; background: linear-gradient(135deg, #1a73e8, #4285f4);
-  box-shadow: 0 10px 24px -10px rgba(26,115,232,.6); }
-.an-lock .cta:hover { opacity: .92; }
-
-@media (max-width: 760px) { .an-cols { grid-template-columns: 1fr; } .an-hero h1 { font-size: 22px; } }
-`;
 
 const RANGOS: { id: string; label: string; dias: number | null }[] = [
   { id: "7", label: "7 días", dias: 7 },
@@ -373,12 +179,35 @@ function deltaPct(cur: number, prev: number): number | null {
 function DeltaChip({ delta }: { delta: number | null | undefined }) {
   if (delta == null || !isFinite(delta)) return null;
   const r = Math.round(delta);
-  if (r === 0) return <span className="an-delta flat">— sin cambio</span>;
+  if (r === 0) return <s-badge tone="neutral">— sin cambio</s-badge>;
   const up = r > 0;
   return (
-    <span className={`an-delta ${up ? "up" : "down"}`}>
-      {up ? "▲" : "▼"} {Math.abs(r)}% <span className="prev">vs anterior</span>
-    </span>
+    <s-badge tone={up ? "success" : "critical"}>
+      {`${up ? "▲" : "▼"} ${Math.abs(r)}% vs anterior`}
+    </s-badge>
+  );
+}
+
+// Barra de progreso simple para gráficas (Polaris no trae charts; estilos
+// inline mínimos solo para la visualización de datos).
+const TRACK: React.CSSProperties = {
+  height: 8,
+  background: "#e6e6e8",
+  borderRadius: 999,
+  overflow: "hidden",
+};
+function Barra({ pct, color }: { pct: number; color?: string }) {
+  return (
+    <div style={TRACK}>
+      <div
+        style={{
+          width: `${Math.max(0, Math.min(100, pct))}%`,
+          height: "100%",
+          borderRadius: 999,
+          background: color ?? "#2c6ecb",
+        }}
+      />
+    </div>
   );
 }
 
@@ -713,30 +542,47 @@ export default function Analitica() {
         <s-button slot="breadcrumbs" variant="tertiary" href="/app" icon="arrow-left">
           Inicio
         </s-button>
-        <style>{CSS}</style>
-        <div className="an-wrap">
-          <div className="an-lock">
-            <div className="ic">📊🔒</div>
-            <div className="t">Analítica es una función del Plan Pro</div>
-            <div className="d">
+        <s-section heading="Analítica es una función del Plan Pro">
+          <s-stack gap="base">
+            <s-stack direction="inline">
+              <s-badge icon="lock" tone="info">Plan Pro</s-badge>
+            </s-stack>
+            <s-paragraph color="subdued">
               Mide el pulso de tu negocio B2B: ingresos cobrados, valor en
               pipeline, conversión de cotizaciones a ventas y tus mejores
               clientes — todo en un panel claro.
-            </div>
-            <ul className="feats">
-              <li><span className="chk">✓</span> Ingresos, pipeline y conversión con variación vs el periodo anterior</li>
-              <li><span className="chk">✓</span> Cotizaciones estancadas por dar seguimiento</li>
-              <li><span className="chk">✓</span> Tendencia de ingresos, embudo y tiempo de cierre</li>
-              <li><span className="chk">✓</span> Top clientes y productos, desglose por empresa y exportar a CSV</li>
-            </ul>
-            <button className="cta" onClick={() => navigate("/app/plans")}>
-              Subir al Plan Pro
-            </button>
-          </div>
-        </div>
+            </s-paragraph>
+            <s-unordered-list>
+              <s-list-item>
+                Ingresos, pipeline y conversión con variación vs el periodo
+                anterior
+              </s-list-item>
+              <s-list-item>
+                Cotizaciones estancadas por dar seguimiento
+              </s-list-item>
+              <s-list-item>
+                Tendencia de ingresos, embudo y tiempo de cierre
+              </s-list-item>
+              <s-list-item>
+                Top clientes y productos, desglose por empresa y exportar a CSV
+              </s-list-item>
+            </s-unordered-list>
+            <s-stack direction="inline">
+              <s-button variant="primary" onClick={() => navigate("/app/plans")}>
+                Subir al Plan Pro
+              </s-button>
+            </s-stack>
+          </s-stack>
+        </s-section>
       </s-page>
     );
   }
+
+  const TONO_INSIGHT: Record<string, "success" | "warning" | "info"> = {
+    good: "success",
+    warn: "warning",
+    info: "info",
+  };
 
   return (
     <s-page heading="Analítica">
@@ -744,352 +590,381 @@ export default function Analitica() {
         Inicio
       </s-button>
 
-      <style>{CSS}</style>
+      {/* Insights automáticos */}
+      {insights.map((it, i) => (
+        <s-banner key={i} tone={TONO_INSIGHT[it.tone] ?? "info"}>
+          <s-paragraph>{it.node}</s-paragraph>
+        </s-banner>
+      ))}
 
-      <div className="an-wrap">
-        <div className="an-hero">
-          <h1>Analítica 📊</h1>
-          <p>
-            El pulso de tu negocio B2B: ingresos, conversión de cotizaciones a
-            ventas y tus mejores clientes — de un vistazo.
-          </p>
-        </div>
+      {/* Rango + exportar + KPIs */}
+      <s-section accessibilityLabel="Indicadores del periodo">
+        <s-stack gap="base">
+          <s-stack
+            direction="inline"
+            gap="small-200"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <s-stack direction="inline" gap="small-300">
+              {RANGOS.map((r) => (
+                <s-button
+                  key={r.id}
+                  variant={rango === r.id ? "primary" : "secondary"}
+                  onClick={() => setRango(r.id)}
+                >
+                  {r.label}
+                </s-button>
+              ))}
+            </s-stack>
+            <s-stack direction="inline" gap="small-300">
+              <s-button variant="tertiary" onClick={exportarCSV}>
+                Exportar CSV
+              </s-button>
+              <s-button variant="tertiary" onClick={() => window.print()}>
+                Imprimir / PDF
+              </s-button>
+            </s-stack>
+          </s-stack>
 
-        {/* Insights automáticos */}
-        {insights.length > 0 && (
-          <div className="an-insights">
-            {insights.map((it, i) => (
-              <div className={`an-insight ${it.tone}`} key={i}>
-                <span className="ic">{it.ic}</span>
-                <span>{it.node}</span>
-              </div>
-            ))}
-          </div>
-        )}
+          <s-grid
+            gridTemplateColumns="repeat(auto-fit, minmax(180px, 1fr))"
+            gap="base"
+          >
+            <s-stack gap="small-300">
+              <s-text color="subdued">Ingresos cobrados</s-text>
+              <s-heading>{fmtMoney.format(ingresosAnim)}</s-heading>
+              <s-stack direction="inline">
+                <DeltaChip delta={m.deltas?.ingresos} />
+              </s-stack>
+            </s-stack>
+            <s-stack gap="small-300">
+              <s-text color="subdued">Valor en pipeline</s-text>
+              <s-heading>{fmtMoney.format(pipelineAnim)}</s-heading>
+              <s-stack direction="inline">
+                <DeltaChip delta={m.deltas?.pipeline} />
+              </s-stack>
+            </s-stack>
+            <s-stack gap="small-300">
+              <s-text color="subdued">Tasa de conversión</s-text>
+              <s-heading>{`${conversionAnim.toFixed(1)}%`}</s-heading>
+              <s-stack direction="inline">
+                <DeltaChip delta={m.deltas?.conversion} />
+              </s-stack>
+            </s-stack>
+            <s-stack gap="small-300">
+              <s-text color="subdued">Cotizaciones</s-text>
+              <s-heading>{`${Math.round(totalAnim)}`}</s-heading>
+              <s-stack direction="inline">
+                <DeltaChip delta={m.deltas?.total} />
+              </s-stack>
+            </s-stack>
+            <s-stack gap="small-300">
+              <s-text color="subdued">Ticket promedio</s-text>
+              <s-heading>{fmtMoney.format(ticketAnim)}</s-heading>
+              <s-stack direction="inline">
+                <DeltaChip delta={m.deltas?.ticket} />
+              </s-stack>
+            </s-stack>
+            <s-stack gap="small-300">
+              <s-text color="subdued">Tiempo de cierre</s-text>
+              <s-heading>
+                {m.tiempoCierre != null ? `${m.tiempoCierre.toFixed(1)} d` : "—"}
+              </s-heading>
+            </s-stack>
+          </s-grid>
+        </s-stack>
+      </s-section>
 
-        {/* Toolbar: rango + exportar */}
-        <div className="an-toolbar an-noprint">
-          <div className="an-range">
-            {RANGOS.map((r) => (
-              <button
-                key={r.id}
-                className={rango === r.id ? "on" : ""}
-                onClick={() => setRango(r.id)}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-          <div className="an-export">
-            <button onClick={exportarCSV} title="Descargar las cotizaciones del periodo">
-              ⬇ CSV
-            </button>
-            <button onClick={() => window.print()} title="Imprimir o guardar como PDF">
-              🖨 PDF
-            </button>
-          </div>
-        </div>
-
-        {/* Cotizaciones estancadas (siempre visible, independiente del rango) */}
-        {quotes.length > 0 && (
-          estancadas.length > 0 ? (
-            <div className="an-stuck">
-              <h3>⏰ Cotizaciones por dar seguimiento</h3>
-              <p className="sub">
-                {estancadas.length} {estancadas.length === 1 ? "cotización abierta" : "cotizaciones abiertas"} con
-                +7 días sin cerrarse — <span className="risk">{fmtMoney.format(riesgo)} en riesgo</span>.
-              </p>
-              <div className="an-stuck-list">
-                {estancadas.slice(0, 6).map((q) => (
-                  <div
-                    className="an-stuck-row"
-                    key={q.id}
-                    onClick={() => navigate(`/app/quotes/${q.id.split("/").pop()}`)}
-                  >
-                    <div>
-                      <div className="nm">{q.name}</div>
-                      <div className="cli">{q.cliente}</div>
-                    </div>
-                    <span className="age">{q.dias} días</span>
-                    <span className="am">{fmtMoney.format(q.monto)}</span>
-                  </div>
+      {/* Cotizaciones estancadas (siempre visible, independiente del rango) */}
+      {quotes.length > 0 ? (
+        <s-section heading="Cotizaciones por dar seguimiento">
+          {estancadas.length > 0 ? (
+            <s-stack gap="base">
+              <s-paragraph color="subdued">
+                {estancadas.length}{" "}
+                {estancadas.length === 1
+                  ? "cotización abierta"
+                  : "cotizaciones abiertas"}{" "}
+                con +7 días sin cerrarse — {fmtMoney.format(riesgo)} en riesgo.
+              </s-paragraph>
+              <s-stack gap="small-200">
+                {estancadas.slice(0, 6).map((q, idx) => (
+                  <s-stack gap="small-200" key={q.id}>
+                    {idx > 0 ? <s-divider /> : null}
+                    <s-stack
+                      direction="inline"
+                      gap="small-200"
+                      alignItems="center"
+                      justifyContent="space-between"
+                    >
+                      <s-stack direction="inline" gap="small-200" alignItems="center">
+                        <s-link
+                          onClick={() =>
+                            navigate(`/app/quotes/${q.id.split("/").pop()}`)
+                          }
+                        >
+                          {q.name}
+                        </s-link>
+                        <s-text color="subdued">{q.cliente}</s-text>
+                        <s-badge tone="caution">{`${q.dias} días`}</s-badge>
+                      </s-stack>
+                      <s-text fontVariantNumeric="tabular-nums">
+                        {fmtMoney.format(q.monto)}
+                      </s-text>
+                    </s-stack>
+                  </s-stack>
                 ))}
-              </div>
-            </div>
+              </s-stack>
+            </s-stack>
           ) : (
-            <div className="an-stuck zero">
-              <h3>✅ Sin cotizaciones estancadas</h3>
-              <p className="sub" style={{ margin: 0 }}>
-                Todas tus cotizaciones abiertas tienen menos de 7 días. ¡Buen seguimiento!
-              </p>
-            </div>
-          )
-        )}
+            <s-banner tone="success" heading="Sin cotizaciones estancadas">
+              <s-paragraph>
+                Todas tus cotizaciones abiertas tienen menos de 7 días. ¡Buen
+                seguimiento!
+              </s-paragraph>
+            </s-banner>
+          )}
+        </s-section>
+      ) : null}
 
-        {/* KPIs */}
-        <div className="an-kpis">
-          <div className="an-kpi good">
-            <div className="ic">💰</div>
-            <div className="lbl">Ingresos cobrados</div>
-            <div className="num">{fmtMoney.format(ingresosAnim)}</div>
-            <DeltaChip delta={m.deltas?.ingresos} />
-          </div>
-          <div className="an-kpi accent">
-            <div className="ic">⏳</div>
-            <div className="lbl">Valor en pipeline</div>
-            <div className="num">{fmtMoney.format(pipelineAnim)}</div>
-            <DeltaChip delta={m.deltas?.pipeline} />
-          </div>
-          <div className="an-kpi">
-            <div className="ic">🎯</div>
-            <div className="lbl">Tasa de conversión</div>
-            <div className="num">{conversionAnim.toFixed(1)}%</div>
-            <DeltaChip delta={m.deltas?.conversion} />
-          </div>
-          <div className="an-kpi">
-            <div className="ic">🧾</div>
-            <div className="lbl">Cotizaciones</div>
-            <div className="num">{Math.round(totalAnim)}</div>
-            <DeltaChip delta={m.deltas?.total} />
-          </div>
-          <div className="an-kpi">
-            <div className="ic">📦</div>
-            <div className="lbl">Ticket promedio</div>
-            <div className="num">{fmtMoney.format(ticketAnim)}</div>
-            <DeltaChip delta={m.deltas?.ticket} />
-          </div>
-          <div className="an-kpi">
-            <div className="ic">⚡</div>
-            <div className="lbl">Tiempo de cierre</div>
-            <div className="num">
-              {m.tiempoCierre != null ? `${m.tiempoCierre.toFixed(1)} d` : "—"}
-            </div>
-          </div>
-        </div>
-
-        {m.total === 0 ? (
-          <div className="an-empty">
-            No hay cotizaciones en este rango. Prueba con un periodo más amplio o
-            crea tu primera cotización.
-          </div>
-        ) : (
-          <>
-            {/* Tendencia de ingresos (adaptada al rango) */}
-            <div className="an-section-title">Tendencia</div>
-            <div className="an-card">
-              <h3>📈 Monto cotizado vs cobrado</h3>
-              <div className="an-legend">
-                <span><i className="blue" /> Cotizado</span>
-                <span><i className="green" /> Cobrado</span>
-              </div>
-              <div className="an-tchart">
+      {m.total === 0 ? (
+        <s-section accessibilityLabel="Sin datos">
+          <s-paragraph color="subdued">
+            No hay cotizaciones en este rango. Prueba con un periodo más amplio
+            o crea tu primera cotización.
+          </s-paragraph>
+        </s-section>
+      ) : (
+        <>
+          {/* Tendencia de ingresos (adaptada al rango) */}
+          <s-section heading="Monto cotizado vs cobrado">
+            <s-stack gap="base">
+              <s-stack direction="inline" gap="base">
+                <s-text color="subdued">🟦 Cotizado</s-text>
+                <s-text color="subdued">🟩 Cobrado</s-text>
+              </s-stack>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-end",
+                  gap: 8,
+                  height: 180,
+                  paddingTop: 22,
+                }}
+              >
                 {m.buckets.map((b, i) => (
-                  <div className="an-tcol" key={i}>
+                  <div
+                    key={i}
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 8,
+                      height: "100%",
+                      justifyContent: "flex-end",
+                      minWidth: 0,
+                    }}
+                  >
                     <div
-                      className="an-tbar"
-                      style={{ height: `${(b.cotizado / m.maxBucket) * 100}%` }}
+                      style={{
+                        width: "100%",
+                        maxWidth: 40,
+                        borderRadius: "7px 7px 0 0",
+                        minHeight: 3,
+                        position: "relative",
+                        background: "#2c6ecb",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "flex-end",
+                        overflow: "hidden",
+                        height: `${(b.cotizado / m.maxBucket) * 100}%`,
+                      }}
                     >
                       {b.cotizado > 0 ? (
-                        <span className="cap">{fmtCompact.format(b.cotizado)}</span>
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: -19,
+                            left: -8,
+                            right: -8,
+                            textAlign: "center",
+                            fontSize: 10.5,
+                            fontWeight: 700,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {fmtCompact.format(b.cotizado)}
+                        </span>
                       ) : null}
                       <div
-                        className="cob"
                         style={{
+                          width: "100%",
+                          background: "#29845a",
                           height: `${b.cotizado > 0 ? (b.cobrado / b.cotizado) * 100 : 0}%`,
                         }}
                       />
                     </div>
-                    <div className="an-tlbl">{b.label}</div>
+                    <span style={{ fontSize: 11, textTransform: "capitalize" }}>
+                      {b.label}
+                    </span>
                   </div>
                 ))}
               </div>
-            </div>
+            </s-stack>
+          </s-section>
 
-            <div className="an-section-title">Detalle</div>
-            <div className="an-cols">
-              {/* Embudo de estados */}
-              <div className="an-card">
-                <h3>🔄 Embudo de cotizaciones</h3>
-                <div className="an-funnel">
-                  <div className="an-frow">
-                    <div className="top">
-                      <span className="nm">Abiertas</span>
-                      <span className="vl">{m.abiertas}</span>
-                    </div>
-                    <div className="an-bar">
-                      <span
-                        className="open"
-                        style={{ width: `${(m.abiertas / maxFunnel) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="an-frow">
-                    <div className="top">
-                      <span className="nm">Enviadas (link de pago)</span>
-                      <span className="vl">{m.enviadas}</span>
-                    </div>
-                    <div className="an-bar">
-                      <span
-                        className="sent"
-                        style={{ width: `${(m.enviadas / maxFunnel) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="an-frow">
-                    <div className="top">
-                      <span className="nm">Pagadas</span>
-                      <span className="vl">{m.pagadas}</span>
-                    </div>
-                    <div className="an-bar">
-                      <span
-                        className="paid"
-                        style={{ width: `${(m.pagadas / maxFunnel) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {/* Embudo + top productos */}
+          <s-section heading="Embudo de cotizaciones">
+            <s-stack gap="base">
+              <s-stack gap="small-300">
+                <s-stack direction="inline" justifyContent="space-between">
+                  <s-text>Abiertas</s-text>
+                  <s-text color="subdued">{`${m.abiertas}`}</s-text>
+                </s-stack>
+                <Barra pct={(m.abiertas / maxFunnel) * 100} />
+              </s-stack>
+              <s-stack gap="small-300">
+                <s-stack direction="inline" justifyContent="space-between">
+                  <s-text>Enviadas (link de pago)</s-text>
+                  <s-text color="subdued">{`${m.enviadas}`}</s-text>
+                </s-stack>
+                <Barra pct={(m.enviadas / maxFunnel) * 100} color="#b28400" />
+              </s-stack>
+              <s-stack gap="small-300">
+                <s-stack direction="inline" justifyContent="space-between">
+                  <s-text>Pagadas</s-text>
+                  <s-text color="subdued">{`${m.pagadas}`}</s-text>
+                </s-stack>
+                <Barra pct={(m.pagadas / maxFunnel) * 100} color="#29845a" />
+              </s-stack>
+            </s-stack>
+          </s-section>
 
-              {/* Top productos cotizados */}
-              <div className="an-card">
-                <h3>📦 Top productos cotizados</h3>
-                {m.productos.length > 0 ? (
-                  <div className="an-dist">
-                    {m.productos.map((p) => (
-                      <div className="an-drow" key={p.titulo}>
-                        <div className="top">
-                          <span className="nm">{p.titulo}</span>
-                          <span className="vl">
-                            <b>{p.cantidad}</b> uds · {p.n}
-                          </span>
-                        </div>
-                        <div className="an-dbar">
-                          <span
-                            style={{
-                              width: `${(p.cantidad / m.productos[0].cantidad) * 100}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="an-mini">Sin productos en este rango.</div>
-                )}
-              </div>
-            </div>
-
-            {/* Top clientes */}
-            <div className="an-section-title">Mejores clientes</div>
-            <div className="an-card">
-              <h3>🏅 Top 5 por monto cotizado</h3>
-              <div className="an-top">
-                {m.top.map((c, i) => (
-                  <div className="an-top-row" key={c.nombre}>
-                    <span className={`rk ${i === 0 ? "gold" : ""}`}>
-                      {i + 1}
-                    </span>
-                    <span className="nm">{c.nombre}</span>
-                    <span className="meta">
-                      {c.n} {c.n === 1 ? "cotización" : "cotizaciones"}
-                    </span>
-                    <span className="am">{fmtMoney.format(c.monto)}</span>
-                  </div>
+          <s-section heading="Top productos cotizados">
+            {m.productos.length > 0 ? (
+              <s-stack gap="base">
+                {m.productos.map((p) => (
+                  <s-stack gap="small-300" key={p.titulo}>
+                    <s-stack direction="inline" justifyContent="space-between" gap="small-200">
+                      <s-text>{p.titulo}</s-text>
+                      <s-text color="subdued">{`${p.cantidad} uds · ${p.n}`}</s-text>
+                    </s-stack>
+                    <Barra pct={(p.cantidad / m.productos[0].cantidad) * 100} />
+                  </s-stack>
                 ))}
-              </div>
-            </div>
+              </s-stack>
+            ) : (
+              <s-paragraph color="subdued">
+                Sin productos en este rango.
+              </s-paragraph>
+            )}
+          </s-section>
 
-            {/* Desglose B2B: empresas + términos de crédito */}
-            <div className="an-section-title sep">Desglose B2B</div>
-            <div className="an-cols">
-              <div className="an-card">
-                <h3>🏢 Por empresa</h3>
-                {m.empresas.length > 0 ? (
-                  <div className="an-dist">
-                    {m.empresas.map((e) => (
-                      <div className="an-drow" key={e.nombre}>
-                        <div className="top">
-                          <span className="nm">{e.nombre}</span>
-                          <span className="vl"><b>{fmtMoney.format(e.monto)}</b> · {e.n}</span>
-                        </div>
-                        <div className="an-dbar">
-                          <span
-                            style={{ width: `${(e.monto / m.empresas[0].monto) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="an-mini">
-                    Aún no asignas empresas a tus cotizaciones.
-                  </div>
-                )}
-              </div>
+          {/* Top clientes */}
+          <s-section heading="Top 5 clientes por monto cotizado">
+            <s-stack gap="small-200">
+              {m.top.map((c, i) => (
+                <s-stack gap="small-200" key={c.nombre}>
+                  {i > 0 ? <s-divider /> : null}
+                  <s-stack
+                    direction="inline"
+                    gap="small-200"
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
+                    <s-stack direction="inline" gap="small-200" alignItems="center">
+                      <s-badge tone={i === 0 ? "caution" : "neutral"}>
+                        {`${i + 1}`}
+                      </s-badge>
+                      <s-text>{c.nombre}</s-text>
+                      <s-text color="subdued">
+                        {`${c.n} ${c.n === 1 ? "cotización" : "cotizaciones"}`}
+                      </s-text>
+                    </s-stack>
+                    <s-text fontVariantNumeric="tabular-nums">
+                      {fmtMoney.format(c.monto)}
+                    </s-text>
+                  </s-stack>
+                </s-stack>
+              ))}
+            </s-stack>
+          </s-section>
 
-              <div className="an-card">
-                <h3>💳 Por término de crédito</h3>
-                <div className="an-dist">
-                  {m.terminos.map((t) => (
-                    <div className="an-drow" key={t.nombre}>
-                      <div className="top">
-                        <span className="nm">{t.nombre}</span>
-                        <span className="vl"><b>{fmtMoney.format(t.monto)}</b> · {t.n}</span>
-                      </div>
-                      <div className="an-dbar">
-                        <span
-                          className="alt"
-                          style={{ width: `${(t.monto / m.terminos[0].monto) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+          {/* Desglose B2B: empresas + términos de crédito */}
+          <s-section heading="Desglose por empresa B2B">
+            {m.empresas.length > 0 ? (
+              <s-stack gap="base">
+                {m.empresas.map((e) => (
+                  <s-stack gap="small-300" key={e.nombre}>
+                    <s-stack direction="inline" justifyContent="space-between" gap="small-200">
+                      <s-text>{e.nombre}</s-text>
+                      <s-text color="subdued">
+                        {`${fmtMoney.format(e.monto)} · ${e.n}`}
+                      </s-text>
+                    </s-stack>
+                    <Barra pct={(e.monto / m.empresas[0].monto) * 100} />
+                  </s-stack>
+                ))}
+              </s-stack>
+            ) : (
+              <s-paragraph color="subdued">
+                Aún no asignas empresas a tus cotizaciones.
+              </s-paragraph>
+            )}
+          </s-section>
 
-            {/* Uso de CFDI del mes */}
-            {data.cfdi && (
-              <>
-                <div className="an-section-title">Facturación CFDI</div>
-                <div className="an-card an-cfdi">
-                  <h3>🧾 Facturas timbradas este mes</h3>
-                  <div className="row">
-                    <span className="big">
-                      {data.cfdi.timbrados}
-                      <small> / {data.cfdi.limite}</small>
-                    </span>
-                    <span className="plan">Plan {data.cfdi.plan}</span>
-                  </div>
-                  {(() => {
-                    const pct = data.cfdi.limite > 0
+          <s-section heading="Desglose por término de crédito">
+            <s-stack gap="base">
+              {m.terminos.map((t) => (
+                <s-stack gap="small-300" key={t.nombre}>
+                  <s-stack direction="inline" justifyContent="space-between" gap="small-200">
+                    <s-text>{t.nombre}</s-text>
+                    <s-text color="subdued">
+                      {`${fmtMoney.format(t.monto)} · ${t.n}`}
+                    </s-text>
+                  </s-stack>
+                  <Barra pct={(t.monto / m.terminos[0].monto) * 100} color="#8051ff" />
+                </s-stack>
+              ))}
+            </s-stack>
+          </s-section>
+
+          {/* Uso de CFDI del mes */}
+          {data.cfdi ? (
+            <s-section heading="Facturas CFDI timbradas este mes">
+              <s-stack gap="base">
+                <s-stack
+                  direction="inline"
+                  gap="small-200"
+                  alignItems="center"
+                  justifyContent="space-between"
+                >
+                  <s-heading>{`${data.cfdi.timbrados} / ${data.cfdi.limite}`}</s-heading>
+                  <s-badge tone="info">{`Plan ${data.cfdi.plan}`}</s-badge>
+                </s-stack>
+                {(() => {
+                  const pct =
+                    data.cfdi.limite > 0
                       ? Math.min(100, (data.cfdi.timbrados / data.cfdi.limite) * 100)
                       : 0;
-                    const cls = pct >= 100 ? "full" : pct >= 80 ? "warn" : "ok";
-                    return (
-                      <div className="track">
-                        <span className={cls} style={{ width: `${pct}%` }} />
-                      </div>
-                    );
-                  })()}
-                  <div className="note">
-                    {data.cfdi.timbrados === 0 ? (
-                      "Aún no has timbrado facturas este mes."
-                    ) : data.cfdi.extraCobrado > 0 ? (
-                      <>
-                        Cuota agotada. <b>{data.cfdi.extraCobrado} factura(s) de excedente</b> a $
-                        {data.cfdi.extra.toFixed(2)} USD c/u.
-                      </>
-                    ) : (
-                      `Te quedan ${Math.max(0, data.cfdi.limite - data.cfdi.timbrados)} facturas incluidas este mes.`
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </div>
+                  const color =
+                    pct >= 100 ? "#c5280c" : pct >= 80 ? "#b28400" : "#29845a";
+                  return <Barra pct={pct} color={color} />;
+                })()}
+                <s-text color="subdued">
+                  {data.cfdi.timbrados === 0
+                    ? "Aún no has timbrado facturas este mes."
+                    : data.cfdi.extraCobrado > 0
+                      ? `Cuota agotada. ${data.cfdi.extraCobrado} factura(s) de excedente a $${data.cfdi.extra.toFixed(2)} USD c/u.`
+                      : `Te quedan ${Math.max(0, data.cfdi.limite - data.cfdi.timbrados)} facturas incluidas este mes.`}
+                </s-text>
+              </s-stack>
+            </s-section>
+          ) : null}
+        </>
+      )}
     </s-page>
   );
 }

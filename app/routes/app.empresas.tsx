@@ -247,154 +247,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return { ok: true, companyId, limite };
 };
 
-const CSS = `
-.em-wrap { max-width: 1040px; margin: 0 auto; padding: 8px 16px 48px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; color: #1a1a2e; }
-
-.em-hero { position: relative; overflow: hidden; border-radius: 20px; padding: 26px 28px;
-  background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff;
-  box-shadow: 0 14px 34px -12px rgba(26,115,232,.5); margin: 8px 0 22px; }
-.em-hero::after { content: ""; position: absolute; top: -60px; right: -40px; width: 220px; height: 220px;
-  background: rgba(255,255,255,.12); border-radius: 50%; }
-.em-hero h1 { font-size: 26px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.02em; position: relative; }
-.em-hero p { font-size: 15px; margin: 0; opacity: .92; position: relative; max-width: 580px; }
-
-/* Panel de KPIs de cartera B2B */
-.em-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
-.em-kpi { background: #fff; border: 1px solid #ececf0; border-radius: 16px; padding: 16px 18px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.04); }
-.em-kpi .kl { font-size: 12px; color: #6b7280; font-weight: 700; display: flex; align-items: center; gap: 6px; }
-.em-kpi .kv { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin-top: 6px; line-height: 1.1; }
-.em-kpi .ks { font-size: 11.5px; color: #9099a8; font-weight: 600; margin-top: 3px; }
-.em-kpi.alert { background: linear-gradient(135deg, #fff5f5, #fff); border-color: #f6caca; }
-.em-kpi.alert .kv { color: #dc2626; }
-
-/* Barra de herramientas: buscar + ordenar + filtros */
-.em-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
-.em-search { position: relative; flex: 1 1 220px; min-width: 180px; }
-.em-search input { width: 100%; padding: 10px 12px 10px 36px; border: 1px solid #d8d8e0; border-radius: 11px;
-  font-size: 14px; outline: none; font-family: inherit; background: #fff; box-sizing: border-box; }
-.em-search input:focus { border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,.15); }
-.em-search .ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: .5; }
-.em-sort { flex: 0 0 auto; min-width: 190px; max-width: 100%; padding: 10px 34px 10px 12px;
-  border: 1px solid #d8d8e0; border-radius: 11px; font-size: 13.5px; box-sizing: border-box;
-  font-family: inherit; background: #fff; font-weight: 600; color: #374151; outline: none; cursor: pointer; }
-.em-sort:focus { border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,.15); }
-.em-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.em-chip { border: 1px solid #d8d8e0; background: #fff; border-radius: 999px; padding: 8px 13px;
-  font-size: 12.5px; font-weight: 700; color: #6b7280; cursor: pointer; transition: all .12s; }
-.em-chip:hover { border-color: #cfe0fc; }
-.em-chip.on { background: #1a73e8; border-color: #1a73e8; color: #fff; }
-.em-chip.on.warn { background: #dc2626; border-color: #dc2626; }
-.em-count { font-size: 12.5px; color: #9099a8; font-weight: 600; margin-bottom: 14px; }
-.em-trunc { font-size: 12.5px; color: #92600a; background: #fff8eb; border: 1px solid #f3e0b5;
-  border-radius: 10px; padding: 9px 12px; margin-bottom: 14px; font-weight: 600; }
-
-/* Grid de empresas */
-.em-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-.em-card { background: #fff; border: 1px solid #ececf0; border-radius: 18px; padding: 20px 22px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.04); cursor: pointer; transition: box-shadow .15s, transform .15s, border-color .15s; }
-.em-card:hover { box-shadow: 0 12px 28px -14px rgba(0,0,0,.22); transform: translateY(-2px); border-color: #cfe0fc; }
-.em-card .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
-.em-card .nm { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.25; }
-.em-card .ct { font-size: 12.5px; color: #9099a8; font-weight: 600; margin-top: 3px; }
-.em-term { flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
-  background: #eef3ff; color: #1a56c4; white-space: nowrap; }
-
-.em-credit .crow { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
-.em-credit .crow .l { font-size: 12px; color: #6b7280; font-weight: 700; }
-.em-credit .crow .v { font-size: 13px; font-weight: 800; }
-.em-track { height: 10px; background: #eef0f4; border-radius: 999px; overflow: hidden; }
-.em-track span { display: block; height: 100%; border-radius: 999px; transition: width .6s cubic-bezier(.2,.8,.3,1); }
-.em-track span.ok { background: linear-gradient(90deg, #16a34a, #22c55e); }
-.em-track span.warn { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-.em-track span.over { background: linear-gradient(90deg, #dc2626, #ef4444); }
-.em-nolimit { font-size: 12.5px; color: #9099a8; font-weight: 600; padding: 6px 0; }
-.em-nolimit b { color: #1a56c4; }
-
-.em-foot { display: flex; gap: 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #f1f1f4; }
-.em-foot .it { font-size: 12.5px; color: #6b7280; font-weight: 600; }
-.em-foot .it b { color: #1a1a2e; font-weight: 800; }
-
-.em-empty { text-align: center; color: #6b7280; padding: 40px 20px; border: 1px dashed #d8d8e0;
-  border-radius: 16px; background: #fafafb; }
-.em-empty .ic { font-size: 40px; margin-bottom: 12px; }
-.em-empty .t { font-size: 16px; font-weight: 750; color: #1a1a2e; margin-bottom: 6px; }
-.em-empty .d { font-size: 13.5px; line-height: 1.55; max-width: 460px; margin: 0 auto; }
-
-/* Teaser Pro (sin plan) */
-.em-lock { background: linear-gradient(135deg, #f7faff, #eef5ff); border: 1px solid #cfe0fc;
-  border-radius: 20px; padding: 40px 32px; text-align: center; }
-.em-lock .ic { font-size: 46px; margin-bottom: 14px; }
-.em-lock .t { font-size: 20px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.02em; }
-.em-lock .d { font-size: 14.5px; color: #4b5563; line-height: 1.6; max-width: 480px; margin: 0 auto 22px; }
-.em-lock .feats { display: grid; gap: 10px; max-width: 380px; margin: 0 auto 24px; text-align: left; }
-.em-lock .feats li { display: flex; gap: 9px; font-size: 14px; color: #374151; }
-.em-lock .feats .chk { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; background: #dcfce7;
-  color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
-.em-lock .cta { border: 0; border-radius: 12px; padding: 13px 28px; font-size: 15px; font-weight: 800;
-  cursor: pointer; color: #fff; background: linear-gradient(135deg, #1a73e8, #4285f4);
-  box-shadow: 0 10px 24px -10px rgba(26,115,232,.6); }
-.em-lock .cta:hover { opacity: .92; }
-
-/* Drawer lateral */
-.em-overlay { position: fixed; inset: 0; background: rgba(15,18,30,.42); z-index: 60; opacity: 0;
-  pointer-events: none; transition: opacity .25s; }
-.em-overlay.show { opacity: 1; pointer-events: auto; }
-.em-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 420px; max-width: 92vw; background: #fff;
-  z-index: 61; box-shadow: -20px 0 50px -20px rgba(0,0,0,.4); transform: translateX(100%);
-  transition: transform .3s cubic-bezier(.2,.9,.3,1); display: flex; flex-direction: column; }
-.em-drawer.show { transform: translateX(0); }
-.em-dr-head { padding: 22px 24px; border-bottom: 1px solid #eef0f4;
-  background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff; }
-.em-dr-head .nm { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
-.em-dr-head .ct { font-size: 13px; opacity: .9; margin-top: 4px; }
-.em-dr-body { padding: 22px 24px; overflow-y: auto; flex: 1; }
-.em-dr-row { display: flex; justify-content: space-between; align-items: center; gap: 12px;
-  padding: 13px 0; border-top: 1px solid #f1f1f4; }
-.em-dr-row:first-child { border-top: 0; padding-top: 0; }
-.em-dr-row .k { font-size: 13.5px; color: #6b7280; font-weight: 600; }
-.em-dr-row .v { font-size: 14px; font-weight: 800; text-align: right; }
-.em-dr-row .v.email { font-weight: 600; font-size: 13px; color: #1a56c4; }
-
-.em-dr-credit { margin-top: 20px; background: #f7faff; border: 1px solid #e2ecfb; border-radius: 14px; padding: 18px; }
-.em-dr-credit .lbl { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 10px; }
-.em-dr-credit .track { height: 12px; background: #e5e9f2; border-radius: 999px; overflow: hidden; margin-bottom: 8px; }
-.em-dr-credit .track span { display: block; height: 100%; border-radius: 999px; }
-.em-dr-credit .track span.ok { background: linear-gradient(90deg, #16a34a, #22c55e); }
-.em-dr-credit .track span.warn { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-.em-dr-credit .track span.over { background: linear-gradient(90deg, #dc2626, #ef4444); }
-.em-dr-credit .nums { display: flex; justify-content: space-between; font-size: 12.5px; color: #6b7280; font-weight: 600; }
-
-/* Ubicaciones + catálogos en el drawer */
-.em-dr-locs { margin-top: 22px; }
-.em-dr-locs .hd { font-size: 13px; font-weight: 800; color: #374151; margin-bottom: 10px;
-  display: flex; align-items: center; gap: 7px; }
-.em-loc { border: 1px solid #ececf0; border-radius: 13px; padding: 13px 15px; margin-bottom: 10px; background: #fcfcfd; }
-.em-loc .ln { font-size: 14px; font-weight: 800; letter-spacing: -0.01em; }
-.em-loc .la { font-size: 12.5px; color: #9099a8; font-weight: 600; margin-top: 2px; }
-.em-loc .lmeta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
-.em-tag { font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 999px; white-space: nowrap; }
-.em-tag.term { background: #eef3ff; color: #1a56c4; }
-.em-tag.cat { background: #f0fdf4; color: #15803d; }
-.em-tag.catoff { background: #f3f4f6; color: #9099a8; }
-.em-tag.adj { background: #fef3e8; color: #b45309; }
-
-.em-dr-edit { margin-top: 22px; }
-.em-dr-edit label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
-.em-dr-input { display: flex; gap: 8px; }
-.em-dr-input .pre { display: flex; align-items: center; padding: 0 12px; border: 1px solid #d8d8e0;
-  border-right: 0; border-radius: 10px 0 0 10px; background: #f7f8fa; font-size: 14px; font-weight: 700; color: #6b7280; }
-.em-dr-input input { flex: 1; padding: 11px 12px; border: 1px solid #d8d8e0; border-radius: 0 10px 10px 0;
-  font-size: 14px; outline: none; font-family: inherit; }
-.em-dr-input input:focus { border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,.15); }
-.em-dr-save { margin-top: 14px; width: 100%; border: 0; border-radius: 12px; padding: 13px; font-size: 15px;
-  font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #1a73e8, #4285f4); }
-.em-dr-save:hover { opacity: .92; }
-.em-dr-save:disabled { opacity: .6; cursor: default; }
-
-@media (max-width: 720px) { .em-hero h1 { font-size: 22px; } }
-`;
 
 function nivelCredito(usado: number, limite: number): "ok" | "warn" | "over" {
   if (limite <= 0) return "ok";
@@ -402,6 +254,19 @@ function nivelCredito(usado: number, limite: number): "ok" | "warn" | "over" {
   if (pct >= 1) return "over";
   if (pct >= 0.7) return "warn";
   return "ok";
+}
+
+// Barra de uso de crédito (visualización de datos; Polaris no trae charts).
+function BarraCredito({ usado, limite }: { usado: number; limite: number }) {
+  const nivel = nivelCredito(usado, limite);
+  const pct = limite > 0 ? Math.min(100, (usado / limite) * 100) : 0;
+  const color =
+    nivel === "over" ? "#c5280c" : nivel === "warn" ? "#b28400" : "#29845a";
+  return (
+    <div style={{ height: 8, background: "#e6e6e8", borderRadius: 999, overflow: "hidden" }}>
+      <div style={{ width: `${pct}%`, height: "100%", borderRadius: 999, background: color }} />
+    </div>
+  );
 }
 
 type Empresa = ReturnType<typeof useLoaderData<typeof loader>>["empresas"][number];
@@ -512,27 +377,29 @@ export default function Empresas() {
         <s-button slot="breadcrumbs" variant="tertiary" href="/app" icon="arrow-left">
           Inicio
         </s-button>
-        <style>{CSS}</style>
-        <div className="em-wrap">
-          <div className="em-lock">
-            <div className="ic">🏢🔒</div>
-            <div className="t">Empresas B2B es una función del Plan Pro</div>
-            <div className="d">
+        <s-section heading="Empresas B2B es una función del Plan Pro">
+          <s-stack gap="base">
+            <s-stack direction="inline">
+              <s-badge icon="lock" tone="info">Plan Pro</s-badge>
+            </s-stack>
+            <s-paragraph color="subdued">
               Gestiona a tus clientes empresariales con límites de crédito,
               control de saldo y términos de pago — todo en un panel pensado
               para ventas B2B.
-            </div>
-            <ul className="feats" style={{ listStyle: "none", padding: 0 }}>
-              <li><span className="chk">✓</span> Límite de crédito por empresa</li>
-              <li><span className="chk">✓</span> Crédito en uso vs. disponible en tiempo real</li>
-              <li><span className="chk">✓</span> Términos de pago (Net 30 / 60) por cliente</li>
-              <li><span className="chk">✓</span> Historial de compras y cotizaciones</li>
-            </ul>
-            <button className="cta" onClick={() => navigate("/app/plans")}>
-              Subir al Plan Pro
-            </button>
-          </div>
-        </div>
+            </s-paragraph>
+            <s-unordered-list>
+              <s-list-item>Límite de crédito por empresa</s-list-item>
+              <s-list-item>Crédito en uso vs. disponible en tiempo real</s-list-item>
+              <s-list-item>Términos de pago (Net 30 / 60) por cliente</s-list-item>
+              <s-list-item>Historial de compras y cotizaciones</s-list-item>
+            </s-unordered-list>
+            <s-stack direction="inline">
+              <s-button variant="primary" onClick={() => navigate("/app/plans")}>
+                Subir al Plan Pro
+              </s-button>
+            </s-stack>
+          </s-stack>
+        </s-section>
       </s-page>
     );
   }
@@ -542,318 +409,318 @@ export default function Empresas() {
       <s-button slot="breadcrumbs" variant="tertiary" href="/app" icon="arrow-left">
         Inicio
       </s-button>
-      <style>{CSS}</style>
 
-      <div className="em-wrap">
-        <div className="em-hero">
-          <h1>Empresas B2B 🏢</h1>
-          <p>
-            Tus clientes empresariales con su línea de crédito, saldo en uso y
-            términos de pago. Toca una empresa para ver el detalle y ajustar su
-            límite.
-          </p>
-        </div>
+      {lista.length === 0 ? (
+        <s-section heading="Aún no tienes empresas B2B">
+          <s-paragraph color="subdued">
+            Crea empresas desde tu admin de Shopify (Clientes → Empresas) o al
+            asignar una empresa a una cotización. Aquí aparecerán con su línea
+            de crédito y saldo.
+          </s-paragraph>
+        </s-section>
+      ) : (
+        <>
+          {/* KPIs de cartera */}
+          <s-section accessibilityLabel="Resumen de cartera B2B">
+            <s-grid
+              gridTemplateColumns="repeat(auto-fit, minmax(170px, 1fr))"
+              gap="base"
+            >
+              <s-stack gap="small-300">
+                <s-text color="subdued">Crédito otorgado</s-text>
+                <s-heading>{fmt.format(kpis.otorgado)}</s-heading>
+                <s-text color="subdued">{`${kpis.conLimite} empresas con límite`}</s-text>
+              </s-stack>
+              <s-stack gap="small-300">
+                <s-text color="subdued">Crédito en uso</s-text>
+                <s-heading>{fmt.format(kpis.enUso)}</s-heading>
+                <s-text color="subdued">cotizaciones activas sin cobrar</s-text>
+              </s-stack>
+              <s-stack gap="small-300">
+                <s-text color="subdued">Disponible</s-text>
+                <s-heading>{fmt.format(kpis.disponible)}</s-heading>
+                <s-text color="subdued">sobre el crédito otorgado</s-text>
+              </s-stack>
+              <s-stack gap="small-300">
+                <s-text color="subdued">Sobre su límite</s-text>
+                <s-stack direction="inline" gap="small-200" alignItems="center">
+                  <s-heading>{`${kpis.sobre}`}</s-heading>
+                  {kpis.sobre > 0 ? (
+                    <s-badge tone="critical">
+                      {kpis.sobre === 1 ? "empresa excedida" : "empresas excedidas"}
+                    </s-badge>
+                  ) : null}
+                </s-stack>
+              </s-stack>
+            </s-grid>
+          </s-section>
 
-        {lista.length === 0 ? (
-          <div className="em-empty">
-            <div className="ic">🏢</div>
-            <div className="t">Aún no tienes empresas B2B</div>
-            <div className="d">
-              Crea empresas desde tu admin de Shopify (Clientes → Empresas) o al
-              asignar una empresa a una cotización. Aquí aparecerán con su línea
-              de crédito y saldo.
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* KPIs de cartera */}
-            <div className="em-kpis">
-              <div className="em-kpi">
-                <div className="kl">💳 Crédito otorgado</div>
-                <div className="kv">{fmt.format(kpis.otorgado)}</div>
-                <div className="ks">{kpis.conLimite} empresas con límite</div>
-              </div>
-              <div className="em-kpi">
-                <div className="kl">📊 Crédito en uso</div>
-                <div className="kv">{fmt.format(kpis.enUso)}</div>
-                <div className="ks">cotizaciones activas sin cobrar</div>
-              </div>
-              <div className="em-kpi">
-                <div className="kl">✅ Disponible</div>
-                <div className="kv">{fmt.format(kpis.disponible)}</div>
-                <div className="ks">sobre el crédito otorgado</div>
-              </div>
-              <div className={`em-kpi ${kpis.sobre > 0 ? "alert" : ""}`}>
-                <div className="kl">⚠️ Sobre su límite</div>
-                <div className="kv">{kpis.sobre}</div>
-                <div className="ks">
-                  {kpis.sobre === 1 ? "empresa excedida" : "empresas excedidas"}
-                </div>
-              </div>
-            </div>
+          {/* Detalle de la empresa seleccionada */}
+          {abierta ? (
+            <s-section heading={abierta.name}>
+              <s-stack gap="base">
+                <s-stack direction="inline" justifyContent="space-between">
+                  <s-text color="subdued">
+                    {abierta.contactoNombre
+                      ? `Contacto: ${abierta.contactoNombre}`
+                      : "Sin contacto principal"}
+                  </s-text>
+                  <s-button variant="tertiary" onClick={cerrar}>
+                    Cerrar detalle
+                  </s-button>
+                </s-stack>
 
-            {/* Buscar / ordenar / filtrar */}
-            <div className="em-tools">
-              <div className="em-search">
-                <span className="ic">🔍</span>
-                <input
-                  type="text"
+                <s-grid
+                  gridTemplateColumns="repeat(auto-fit, minmax(200px, 1fr))"
+                  gap="base"
+                >
+                  <s-stack gap="small-300">
+                    <s-text color="subdued">Correo de contacto</s-text>
+                    <s-text>{abierta.contactoEmail || "—"}</s-text>
+                  </s-stack>
+                  <s-stack gap="small-300">
+                    <s-text color="subdued">Términos de pago</s-text>
+                    <s-text>{abierta.terminos || "—"}</s-text>
+                  </s-stack>
+                  <s-stack gap="small-300">
+                    <s-text color="subdued">Cotizaciones activas</s-text>
+                    <s-text>{`${abierta.activas}`}</s-text>
+                  </s-stack>
+                  <s-stack gap="small-300">
+                    <s-text color="subdued">Pedidos completados</s-text>
+                    <s-text>{`${abierta.ordenes}`}</s-text>
+                  </s-stack>
+                  <s-stack gap="small-300">
+                    <s-text color="subdued">Total comprado (histórico)</s-text>
+                    <s-text>{fmt.format(abierta.totalComprado)}</s-text>
+                  </s-stack>
+                  <s-stack gap="small-300">
+                    <s-text color="subdued">Contactos / ubicaciones</s-text>
+                    <s-text>{`${abierta.contactos} / ${abierta.ubicacionesCount}`}</s-text>
+                  </s-stack>
+                </s-grid>
+
+                {/* Ubicaciones con sus términos y catálogo (lista de precios) */}
+                {abierta.ubicaciones.length > 0 ? (
+                  <s-stack gap="small-200">
+                    <s-heading>Ubicaciones y catálogos</s-heading>
+                    {abierta.ubicaciones.map((u: any) => (
+                      <s-box
+                        key={u.id}
+                        border="base"
+                        borderRadius="base"
+                        padding="base"
+                      >
+                        <s-stack gap="small-300">
+                          <s-text>{u.name}</s-text>
+                          {u.dir ? <s-text color="subdued">{u.dir}</s-text> : null}
+                          <s-stack direction="inline" gap="small-300">
+                            {u.term ? (
+                              <s-badge tone="info">{u.term}</s-badge>
+                            ) : null}
+                            {u.catalogos.map((c: any, i: number) => (
+                              <s-badge
+                                key={i}
+                                tone={c.activo ? "success" : "neutral"}
+                              >
+                                {c.title}
+                                {c.lista && c.lista !== c.title
+                                  ? ` · ${c.lista}`
+                                  : ""}
+                              </s-badge>
+                            ))}
+                            {u.catalogos
+                              .filter((c: any) => c.ajuste)
+                              .map((c: any, i: number) => (
+                                <s-badge key={`a${i}`} tone="caution">
+                                  {c.ajuste}
+                                </s-badge>
+                              ))}
+                            {!u.term && u.catalogos.length === 0 ? (
+                              <s-badge tone="neutral">
+                                Sin catálogo ni términos
+                              </s-badge>
+                            ) : null}
+                          </s-stack>
+                        </s-stack>
+                      </s-box>
+                    ))}
+                    {abierta.ubicacionesCount > abierta.ubicaciones.length ? (
+                      <s-text color="subdued">
+                        +{abierta.ubicacionesCount - abierta.ubicaciones.length}{" "}
+                        ubicaciones más
+                      </s-text>
+                    ) : null}
+                  </s-stack>
+                ) : null}
+
+                {/* Línea de crédito */}
+                <s-stack gap="small-300">
+                  <s-heading>Línea de crédito</s-heading>
+                  {abierta.limite > 0 ? (
+                    <>
+                      <BarraCredito
+                        usado={abierta.usado}
+                        limite={abierta.limite}
+                      />
+                      <s-stack direction="inline" justifyContent="space-between">
+                        <s-text color="subdued">
+                          En uso: {fmt.format(abierta.usado)}
+                        </s-text>
+                        <s-text color="subdued">
+                          Disponible:{" "}
+                          {fmt.format(
+                            Math.max(0, abierta.limite - abierta.usado),
+                          )}
+                        </s-text>
+                      </s-stack>
+                    </>
+                  ) : (
+                    <s-text color="subdued">
+                      Sin límite definido · en uso {fmt.format(abierta.usado)}
+                    </s-text>
+                  )}
+                </s-stack>
+
+                {/* Editar límite */}
+                <s-stack direction="inline" gap="small-200" alignItems="end">
+                  <s-text-field
+                    label={`Límite de crédito (${currency})`}
+                    placeholder="100000"
+                    value={limiteInput}
+                    onChange={(e: any) =>
+                      setLimiteInput(
+                        e.currentTarget.value.replace(/[^0-9.]/g, ""),
+                      )
+                    }
+                  />
+                  <s-button
+                    variant="primary"
+                    onClick={guardarLimite}
+                    loading={guardando}
+                  >
+                    Guardar límite
+                  </s-button>
+                </s-stack>
+              </s-stack>
+            </s-section>
+          ) : null}
+
+          {/* Buscar / ordenar / filtrar + lista */}
+          <s-section heading="Empresas">
+            <s-stack gap="base">
+              <s-stack direction="inline" gap="small-200" alignItems="end">
+                <s-search-field
+                  label="Buscar"
                   placeholder="Buscar empresa…"
                   value={busqueda}
-                  onChange={(ev) => setBusqueda(ev.target.value)}
+                  onInput={(e: any) => setBusqueda(e.currentTarget.value)}
                 />
-              </div>
-              <select
-                className="em-sort"
-                value={orden}
-                onChange={(ev) => setOrden(ev.target.value as OrdenId)}
-              >
-                <option value="uso">Más crédito en uso</option>
-                <option value="riesgo">Mayor % de su límite</option>
-                <option value="comprado">Más comprado (histórico)</option>
-                <option value="nombre">Nombre (A–Z)</option>
-              </select>
-              <div className="em-chips">
+                <s-select
+                  label="Ordenar por"
+                  value={orden}
+                  onChange={(e: any) => setOrden(e.currentTarget.value as OrdenId)}
+                >
+                  <s-option value="uso">Más crédito en uso</s-option>
+                  <s-option value="riesgo">Mayor % de su límite</s-option>
+                  <s-option value="comprado">Más comprado (histórico)</s-option>
+                  <s-option value="nombre">Nombre (A–Z)</s-option>
+                </s-select>
+              </s-stack>
+              <s-stack direction="inline" gap="small-300" alignItems="center">
                 {([
                   ["todas", "Todas"],
                   ["credito", "Con crédito"],
                   ["over", "Sobre límite"],
                   ["nolimit", "Sin límite"],
                 ] as [FiltroId, string][]).map(([id, label]) => (
-                  <button
+                  <s-button
                     key={id}
-                    className={`em-chip ${filtro === id ? "on" : ""} ${id === "over" ? "warn" : ""}`}
+                    variant={filtro === id ? "primary" : "secondary"}
+                    tone={id === "over" && filtro === id ? "critical" : undefined}
                     onClick={() => setFiltro(id)}
                   >
                     {label}
-                  </button>
+                  </s-button>
                 ))}
-              </div>
-            </div>
+                <s-text color="subdued">
+                  {visibles.length} de {lista.length} empresas
+                </s-text>
+              </s-stack>
 
-            {truncado ? (
-              <div className="em-trunc">
-                Mostrando una parte de tus datos por volumen. Usa el buscador para
-                encontrar una empresa específica.
-              </div>
-            ) : null}
+              {truncado ? (
+                <s-banner tone="warning" heading="Datos parciales">
+                  <s-paragraph>
+                    Mostrando una parte de tus datos por volumen. Usa el
+                    buscador para encontrar una empresa específica.
+                  </s-paragraph>
+                </s-banner>
+              ) : null}
 
-            <div className="em-count">
-              {visibles.length} de {lista.length} empresas
-            </div>
-
-            {visibles.length === 0 ? (
-              <div className="em-empty">
-                <div className="ic">🔍</div>
-                <div className="t">Sin resultados</div>
-                <div className="d">
+              {visibles.length === 0 ? (
+                <s-paragraph color="subdued">
                   Ninguna empresa coincide con tu búsqueda o filtro.
-                </div>
-              </div>
-            ) : (
-              <div className="em-grid">
-                {visibles.map((e) => {
-                  const nivel = nivelCredito(e.usado, e.limite);
-                  const pct =
-                    e.limite > 0
-                      ? Math.min(100, (e.usado / e.limite) * 100)
-                      : 0;
-                  return (
-                    <div className="em-card" key={e.id} onClick={() => abrir(e)}>
-                      <div className="head">
-                        <div>
-                          <div className="nm">{e.name}</div>
-                          {e.contactoNombre ? (
-                            <div className="ct">{e.contactoNombre}</div>
-                          ) : null}
-                        </div>
-                        {e.terminos ? (
-                          <span className="em-term">{e.terminos}</span>
-                        ) : null}
-                      </div>
-
-                      <div className="em-credit">
-                        {e.limite > 0 ? (
-                          <>
-                            <div className="crow">
-                              <span className="l">Crédito en uso</span>
-                              <span className="v">
-                                {fmt.format(e.usado)} / {fmt.format(e.limite)}
-                              </span>
-                            </div>
-                            <div className="em-track">
-                              <span className={nivel} style={{ width: `${pct}%` }} />
-                            </div>
-                          </>
-                        ) : (
-                          <div className="em-nolimit">
-                            Sin límite de crédito · <b>toca para definir</b>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="em-foot">
-                        <span className="it">
-                          <b>{e.activas}</b> activas
-                        </span>
-                        <span className="it">
-                          <b>{e.ordenes}</b> pedidos
-                        </span>
-                        {e.ubicacionesCount > 1 ? (
-                          <span className="it">
-                            <b>{e.ubicacionesCount}</b> ubic.
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Drawer de detalle */}
-      <div className={`em-overlay ${abierta ? "show" : ""}`} onClick={cerrar} />
-      <div className={`em-drawer ${abierta ? "show" : ""}`}>
-        {abierta ? (
-          <>
-            <div className="em-dr-head">
-              <div className="nm">{abierta.name}</div>
-              {abierta.contactoNombre ? (
-                <div className="ct">Contacto: {abierta.contactoNombre}</div>
-              ) : null}
-            </div>
-            <div className="em-dr-body">
-              <div className="em-dr-row">
-                <span className="k">Correo de contacto</span>
-                <span className="v email">{abierta.contactoEmail || "—"}</span>
-              </div>
-              <div className="em-dr-row">
-                <span className="k">Términos de pago</span>
-                <span className="v">{abierta.terminos || "—"}</span>
-              </div>
-              <div className="em-dr-row">
-                <span className="k">Cotizaciones activas</span>
-                <span className="v">{abierta.activas}</span>
-              </div>
-              <div className="em-dr-row">
-                <span className="k">Pedidos completados</span>
-                <span className="v">{abierta.ordenes}</span>
-              </div>
-              <div className="em-dr-row">
-                <span className="k">Total comprado (histórico)</span>
-                <span className="v">{fmt.format(abierta.totalComprado)}</span>
-              </div>
-              <div className="em-dr-row">
-                <span className="k">Contactos en la empresa</span>
-                <span className="v">{abierta.contactos}</span>
-              </div>
-              <div className="em-dr-row">
-                <span className="k">Ubicaciones</span>
-                <span className="v">{abierta.ubicacionesCount}</span>
-              </div>
-
-              {/* Ubicaciones con sus términos y catálogo (lista de precios) */}
-              {abierta.ubicaciones.length > 0 ? (
-                <div className="em-dr-locs">
-                  <div className="hd">📍 Ubicaciones y catálogos</div>
-                  {abierta.ubicaciones.map((u: any) => (
-                    <div className="em-loc" key={u.id}>
-                      <div className="ln">{u.name}</div>
-                      {u.dir ? <div className="la">{u.dir}</div> : null}
-                      <div className="lmeta">
-                        {u.term ? (
-                          <span className="em-tag term">{u.term}</span>
-                        ) : null}
-                        {u.catalogos.map((c: any, i: number) => (
-                          <span
-                            key={i}
-                            className={`em-tag ${c.activo ? "cat" : "catoff"}`}
-                          >
-                            {c.title}
-                            {c.lista && c.lista !== c.title ? ` · ${c.lista}` : ""}
-                          </span>
-                        ))}
-                        {u.catalogos
-                          .filter((c: any) => c.ajuste)
-                          .map((c: any, i: number) => (
-                            <span key={`a${i}`} className="em-tag adj">
-                              {c.ajuste}
-                            </span>
-                          ))}
-                        {!u.term && u.catalogos.length === 0 ? (
-                          <span className="em-tag catoff">
-                            Sin catálogo ni términos
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  ))}
-                  {abierta.ubicacionesCount > abierta.ubicaciones.length ? (
-                    <div className="la" style={{ marginTop: 4 }}>
-                      +{abierta.ubicacionesCount - abierta.ubicaciones.length} ubicaciones más
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {/* Barra de crédito */}
-              <div className="em-dr-credit">
-                <div className="lbl">Línea de crédito</div>
-                {abierta.limite > 0 ? (
-                  <>
-                    <div className="track">
-                      <span
-                        className={nivelCredito(abierta.usado, abierta.limite)}
-                        style={{
-                          width: `${Math.min(100, (abierta.usado / abierta.limite) * 100)}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="nums">
-                      <span>En uso: {fmt.format(abierta.usado)}</span>
-                      <span>
-                        Disponible:{" "}
-                        {fmt.format(Math.max(0, abierta.limite - abierta.usado))}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="nums">
-                    <span>Sin límite definido · en uso {fmt.format(abierta.usado)}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Editar límite */}
-              <div className="em-dr-edit">
-                <label>Límite de crédito ({currency})</label>
-                <div className="em-dr-input">
-                  <span className="pre">$</span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="100000"
-                    value={limiteInput}
-                    onChange={(e) =>
-                      setLimiteInput(e.target.value.replace(/[^0-9.]/g, ""))
-                    }
-                  />
-                </div>
-                <button
-                  className="em-dr-save"
-                  onClick={guardarLimite}
-                  disabled={guardando}
+                </s-paragraph>
+              ) : (
+                <s-grid
+                  gridTemplateColumns="repeat(auto-fill, minmax(280px, 1fr))"
+                  gap="base"
                 >
-                  {guardando ? "Guardando…" : "Guardar límite"}
-                </button>
-              </div>
-            </div>
-          </>
-        ) : null}
-      </div>
+                  {visibles.map((e) => (
+                    <s-clickable key={e.id} onClick={() => abrir(e)}>
+                      <s-box border="base" borderRadius="base" padding="base">
+                        <s-stack gap="small-200">
+                          <s-stack
+                            direction="inline"
+                            gap="small-200"
+                            justifyContent="space-between"
+                            alignItems="center"
+                          >
+                            <s-text>{e.name}</s-text>
+                            {e.terminos ? (
+                              <s-badge tone="info">{e.terminos}</s-badge>
+                            ) : null}
+                          </s-stack>
+                          {e.contactoNombre ? (
+                            <s-text color="subdued">{e.contactoNombre}</s-text>
+                          ) : null}
+
+                          {e.limite > 0 ? (
+                            <s-stack gap="small-300">
+                              <s-stack
+                                direction="inline"
+                                justifyContent="space-between"
+                              >
+                                <s-text color="subdued">Crédito en uso</s-text>
+                                <s-text color="subdued">
+                                  {fmt.format(e.usado)} / {fmt.format(e.limite)}
+                                </s-text>
+                              </s-stack>
+                              <BarraCredito usado={e.usado} limite={e.limite} />
+                            </s-stack>
+                          ) : (
+                            <s-text color="subdued">
+                              Sin límite de crédito · toca para definir
+                            </s-text>
+                          )}
+
+                          <s-stack direction="inline" gap="base">
+                            <s-text color="subdued">{`${e.activas} activas`}</s-text>
+                            <s-text color="subdued">{`${e.ordenes} pedidos`}</s-text>
+                            {e.ubicacionesCount > 1 ? (
+                              <s-text color="subdued">{`${e.ubicacionesCount} ubic.`}</s-text>
+                            ) : null}
+                          </s-stack>
+                        </s-stack>
+                      </s-box>
+                    </s-clickable>
+                  ))}
+                </s-grid>
+              )}
+            </s-stack>
+          </s-section>
+        </>
+      )}
     </s-page>
   );
 }

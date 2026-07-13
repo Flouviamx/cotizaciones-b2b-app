@@ -59,6 +59,18 @@ ventas B2B
 
 ---
 
+## Web search content (SEO, opcional — no aparece en el listing, solo lo leen los buscadores)
+
+Flouvia Cotizaciones B2B es una app de Shopify que convierte tu tienda en un portal de cotizaciones para clientes mayoristas y compradores B2B en México. Ideal para negocios que hoy cotizan por WhatsApp, correo o Excel y quieren digitalizar ese proceso sin perder el pago seguro del checkout de Shopify.
+
+Con esta app activas un botón "Solicitar cotización" en el carrito, la página de producto o como botón flotante, para que tus compradores pidan una cotización en vez de comprar directo. Tú negocias precios producto por producto, aplicas descuentos y envías el link de pago o un PDF con tu marca. El comprador paga de forma segura en el checkout de Shopify y el pedido se crea automáticamente — sin saltarte el checkout ni procesar pagos por fuera.
+
+Incluye términos de crédito para ventas mayoristas (Contado, Net 30, Net 60), gestión de empresas B2B con límite de crédito, analítica de ventas y pipeline, y facturación CFDI 4.0 automática ante el SAT — pensada para tiendas Shopify en México que necesitan emitir factura electrónica a sus clientes empresariales.
+
+Búsquedas relacionadas: cotizaciones B2B Shopify, request a quote app México, app de facturación CFDI para Shopify, precios mayoristas Shopify, portal B2B para tienda en línea, ocultar precios y pedir cotización, ventas por mayoreo Shopify, términos de crédito Net 30 Net 60, negociar precios con clientes B2B.
+
+---
+
 ## Primary category
 B2B  (si no existe: "Selling" o "Orders and shipping")
 

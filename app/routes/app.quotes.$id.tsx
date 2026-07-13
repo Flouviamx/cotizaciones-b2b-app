@@ -63,43 +63,12 @@ function estadoLegible(status: string) {
   }
 }
 
-function estadoClase(status: string) {
-  if (status === "INVOICE_SENT") return "sent";
-  if (status === "COMPLETED") return "paid";
-  return "open";
+// Tono del badge de Polaris según el estado de la cotización.
+function estadoTone(status: string): "info" | "caution" | "success" {
+  if (status === "INVOICE_SENT") return "caution";
+  if (status === "COMPLETED") return "success";
+  return "info";
 }
-
-
-const CSS = `
-.qd-wrap { max-width: 820px; margin: 0 auto; padding: 8px 16px 40px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; color: #1a1a2e; }
-.qd-card { background:#fff; border:1px solid #ececf0; border-radius:16px; padding:22px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
-.qd-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
-.qd-card h2 { font-size:16px; font-weight:700; margin:0 0 12px; }
-.qd-head h2 { margin:0; }
-.qd-muted { color:#6b7280; font-size:14px; margin:4px 0; }
-.qd-status { font-size:12px; font-weight:700; padding:4px 11px; border-radius:999px; white-space:nowrap; }
-.qd-status.open { background:#e8f0fe; color:#1a56c4; }
-.qd-status.sent { background:#fef3c7; color:#92400e; }
-.qd-status.paid { background:#dcfce7; color:#15803d; }
-.qd-label { display:block; font-size:13px; font-weight:600; color:#374151; margin:12px 0 6px; }
-.qd-input, .qd-select { width:100%; padding:11px 12px; border:1px solid #d8d8e0; border-radius:10px; font-size:14px; background:#fff; color:#1a1a2e; outline:none; box-sizing:border-box; }
-.qd-input:focus, .qd-select:focus { border-color:#1a73e8; box-shadow:0 0 0 3px rgba(26,115,232,.15); }
-.qd-grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
-.qd-btn { display:inline-block; border:0; border-radius:11px; padding:11px 16px; font-size:14px; font-weight:700; cursor:pointer; margin-top:14px; text-align:center; text-decoration:none; }
-.qd-btn.primary { background:linear-gradient(135deg,#1a73e8,#4285f4); color:#fff; }
-.qd-btn.secondary { background:#eef2f7; color:#1a1a2e; }
-.qd-btn.ghost { background:#fff; border:1.5px solid #1a73e8; color:#1a73e8; }
-.qd-btn[disabled] { opacity:.6; cursor:default; }
-.qd-item { border:1px solid #ececf0; border-radius:12px; padding:14px; margin-bottom:10px; }
-.qd-item .it-title { font-weight:600; font-size:14px; margin-bottom:8px; }
-.qd-fields { display:flex; gap:12px; flex-wrap:wrap; }
-.qd-fields > div { flex:1; min-width:130px; }
-.qd-rm { background:transparent; border:0; color:#dc2626; font-weight:600; font-size:13px; cursor:pointer; margin-top:8px; padding:0; }
-.qd-success { background:#dcfce7; color:#15803d; border-radius:12px; padding:12px 14px; margin-top:14px; font-size:14px; font-weight:600; word-break:break-all; }
-.qd-lock { background:linear-gradient(135deg,#f5f9ff,#eef5ff); border-color:#cfe0fc; }
-.qd-actions { display:flex; gap:10px; flex-wrap:wrap; }
-`;
 
 // Lee los atributos actuales de la cotización y les aplica cambios, sin borrar
 // los demás (draftOrderUpdate REEMPLAZA customAttributes, así que hay que mezclar).
@@ -461,9 +430,19 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   }
 
   if (intent === "generarCFDI") {
+    // Candado de plan en el SERVIDOR (la UI ya lo bloquea, pero el POST no se
+    // debe poder saltar): CFDI es feature Pro/Plus.
+    const proCheck = await billing.check({
+      plans: PLANES_PRO as any,
+      isTest: BILLING_TEST,
+    });
+    if (!proCheck.hasActivePayment) {
+      return { error: "La facturación CFDI está disponible desde el Plan Pro." };
+    }
     const r = await admin.graphql(
       `#graphql
         query cfdiData($id: ID!) {
+          shop { taxesIncluded }
           draftOrder(id: $id) {
             customAttributes { key value }
             lineItems(first: 50) {
@@ -471,6 +450,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
                 node {
                   title
                   quantity
+                  approximateDiscountedUnitPriceSet { shopMoney { amount } }
                   originalUnitPriceSet { shopMoney { amount } }
                 }
               }
@@ -506,11 +486,16 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       };
     }
 
+    // Precio unitario CON los descuentos aplicados (incluye el descuento % de
+    // la cotización): la factura debe cuadrar con lo que el cliente paga en el
+    // checkout. Fallback al precio original si el campo viniera vacío.
     const items = (j.data?.draftOrder?.lineItems?.edges ?? []).map((e: any) => ({
       description: e.node.title,
       quantity: e.node.quantity,
       unitPrice: parseFloat(
-        e.node.originalUnitPriceSet.shopMoney.amount || "0",
+        e.node.approximateDiscountedUnitPriceSet?.shopMoney?.amount ||
+          e.node.originalUnitPriceSet.shopMoney.amount ||
+          "0",
       ),
     }));
 
@@ -523,6 +508,9 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         taxZipCode: cp,
       },
       items,
+      // Si los precios de la tienda YA incluyen IVA, la factura debe desglosarlo
+      // (no agregar 16% encima). Lo dicta la configuración fiscal de la tienda.
+      taxIncluded: Boolean(j.data?.shop?.taxesIncluded),
     });
 
     if (!result.ok) return { error: `CFDI: ${result.error}` };
@@ -839,423 +827,378 @@ export default function QuoteDetail() {
         Cotizaciones
       </s-button>
 
-      <style>{CSS}</style>
-      <div className="qd-wrap">
-        {/* Cliente */}
-        <div className="qd-card">
-          <div className="qd-head">
-            <h2>Cliente</h2>
-            <span className={`qd-status ${estadoClase(quote.status)}`}>
+      {/* Cliente */}
+      <s-section heading="Cliente">
+        <s-stack gap="base">
+          <s-stack direction="inline" gap="small-200" alignItems="center">
+            <s-badge tone={estadoTone(quote.status)}>
               {estadoLegible(quote.status)}
-            </span>
-          </div>
-          <p className="qd-muted">
-            {quote.customer?.displayName ?? "Sin cliente asignado"}
-            {quote.customer?.email ? ` · ${quote.customer.email}` : ""}
-          </p>
-          {requesterAttrs.map((a: any) => (
-            <p className="qd-muted" key={a.key}>
-              {a.key}: {a.value}
-            </p>
-          ))}
+            </s-badge>
+            <s-text color="subdued">
+              {quote.customer?.displayName ?? "Sin cliente asignado"}
+              {quote.customer?.email ? ` · ${quote.customer.email}` : ""}
+            </s-text>
+          </s-stack>
+          {requesterAttrs.length > 0 ? (
+            <s-stack gap="small-300">
+              {requesterAttrs.map((a: any) => (
+                <s-text color="subdued" key={a.key}>
+                  {a.key}: {a.value}
+                </s-text>
+              ))}
+            </s-stack>
+          ) : null}
 
           {customers.length === 0 ? (
-            <p className="qd-muted">
+            <s-paragraph color="subdued">
               No hay clientes en la tienda. Crea uno en el admin para asignarlo.
-            </p>
+            </s-paragraph>
           ) : (
-            <>
-              <label className="qd-label">Asignar cliente</label>
-              <select
-                className="qd-select"
+            <s-stack direction="inline" gap="small-200" alignItems="end">
+              <s-select
+                label="Asignar cliente"
                 value={selectedCustomer}
-                onChange={(e) => setSelectedCustomer(e.target.value)}
+                onChange={(e: any) => setSelectedCustomer(e.currentTarget.value)}
               >
-                <option value="">— Elegir cliente —</option>
+                <s-option value="">— Elegir cliente —</s-option>
                 {customers.map((c: any) => (
-                  <option key={c.id} value={c.id}>
+                  <s-option key={c.id} value={c.id}>
                     {c.displayName}
-                  </option>
+                  </s-option>
                 ))}
-              </select>
-              <button
-                className="qd-btn ghost"
-                onClick={asignarCliente}
-                disabled={isAssigning}
-              >
-                {isAssigning ? "Asignando…" : "Asignar cliente"}
-              </button>
-            </>
+              </s-select>
+              <s-button onClick={asignarCliente} loading={isAssigning}>
+                Asignar cliente
+              </s-button>
+            </s-stack>
           )}
 
           {hasPro ? (
             companies.length === 0 ? (
-              <p className="qd-muted" style={{ marginTop: 16 }}>
+              <s-paragraph color="subdued">
                 Empresas B2B: no hay empresas en la tienda (o B2B no está
                 activado). Crea una en Clientes → Empresas.
-              </p>
+              </s-paragraph>
             ) : (
-              <>
-                <label className="qd-label">Asignar empresa B2B</label>
-                <select
-                  className="qd-select"
+              <s-stack direction="inline" gap="small-200" alignItems="end">
+                <s-select
+                  label="Asignar empresa B2B"
                   value={selectedCompany}
-                  onChange={(e) => setSelectedCompany(e.target.value)}
+                  onChange={(e: any) => setSelectedCompany(e.currentTarget.value)}
                 >
-                  <option value="">— Elegir empresa —</option>
+                  <s-option value="">— Elegir empresa —</s-option>
                   {companies.map((c: any) => (
-                    <option key={c.id} value={c.id}>
+                    <s-option key={c.id} value={c.id}>
                       {c.name}
-                    </option>
+                    </s-option>
                   ))}
-                </select>
-                <button
-                  className="qd-btn ghost"
-                  onClick={asignarEmpresa}
-                  disabled={isAssigningCompany}
-                >
-                  {isAssigningCompany ? "Asignando…" : "Asignar empresa"}
-                </button>
-              </>
+                </s-select>
+                <s-button onClick={asignarEmpresa} loading={isAssigningCompany}>
+                  Asignar empresa
+                </s-button>
+              </s-stack>
             )
           ) : (
-            <div style={{ marginTop: 16 }}>
-              <label className="qd-label" style={{ marginTop: 0 }}>
-                🔒 Asignar empresa B2B · Plan Pro
-              </label>
-              <p className="qd-muted">
+            <s-stack gap="small-300">
+              <s-stack direction="inline" gap="small-300" alignItems="center">
+                <s-badge icon="lock" tone="info">Plan Pro</s-badge>
+                <s-text>Asignar empresa B2B</s-text>
+              </s-stack>
+              <s-paragraph color="subdued">
                 Vincula la cotización a una empresa con límite de crédito en el
                 Plan Pro.{" "}
-                <a
-                  href="/app/plans"
-                  style={{ color: "#1a56c4", fontWeight: 600 }}
-                >
-                  Ver planes
-                </a>
-              </p>
-            </div>
+                <s-link onClick={() => navigate("/app/plans")}>Ver planes</s-link>
+              </s-paragraph>
+            </s-stack>
           )}
-        </div>
+        </s-stack>
+      </s-section>
 
-        {/* Términos de crédito — desde Plan Básico */}
-        {hasPaid ? (
-          <div className="qd-card">
-            <h2>Términos de crédito</h2>
-            <select
-              className="qd-select"
+      {/* Términos de crédito — desde Plan Básico */}
+      {hasPaid ? (
+        <s-section heading="Términos de crédito">
+          <s-stack direction="inline" gap="small-200" alignItems="end">
+            <s-select
+              label="Forma de pago"
               value={creditTerms}
-              onChange={(e) => setCreditTerms(e.target.value)}
+              onChange={(e: any) => setCreditTerms(e.currentTarget.value)}
             >
-              <option value="Contado">Contado (pago inmediato)</option>
-              <option value="Net 30">Net 30 (30 días)</option>
-              <option value="Net 60">Net 60 (60 días)</option>
-            </select>
-            <button
-              className="qd-btn ghost"
-              onClick={guardarTerminos}
-              disabled={isSavingTerms}
-            >
-              {isSavingTerms ? "Guardando…" : "Guardar términos"}
-            </button>
-          </div>
-        ) : (
-          <div className="qd-card qd-lock">
-            <h2>Términos de crédito · Plan Básico</h2>
-            <p className="qd-muted">
+              <s-option value="Contado">Contado (pago inmediato)</s-option>
+              <s-option value="Net 30">Net 30 (30 días)</s-option>
+              <s-option value="Net 60">Net 60 (60 días)</s-option>
+            </s-select>
+            <s-button onClick={guardarTerminos} loading={isSavingTerms}>
+              Guardar términos
+            </s-button>
+          </s-stack>
+        </s-section>
+      ) : (
+        <s-section heading="Términos de crédito">
+          <s-stack gap="small-200">
+            <s-stack direction="inline">
+              <s-badge icon="lock" tone="info">Plan Básico</s-badge>
+            </s-stack>
+            <s-paragraph color="subdued">
               Ofrece condiciones de pago (Net 30 / Net 60) a tus clientes B2B
               desde el Plan Básico.
-            </p>
-            <button
-              className="qd-btn primary"
-              onClick={() => navigate("/app/plans")}
-            >
-              Ver planes
-            </button>
-          </div>
-        )}
+            </s-paragraph>
+            <s-stack direction="inline">
+              <s-button variant="primary" onClick={() => navigate("/app/plans")}>
+                Ver planes
+              </s-button>
+            </s-stack>
+          </s-stack>
+        </s-section>
+      )}
 
-        {/* Datos fiscales (CFDI) */}
-        {hasPro ? (
-          <div className="qd-card">
-            <h2>Datos fiscales (CFDI)</h2>
-            <p className="qd-muted">
+      {/* Datos fiscales (CFDI) */}
+      {hasPro ? (
+        <s-section heading="Datos fiscales (CFDI)">
+          <s-stack gap="base">
+            <s-paragraph color="subdued">
               Datos del comprador para la factura CFDI (se usan al timbrar).
-            </p>
-            <div className="qd-grid2">
-              <div>
-                <label className="qd-label">RFC</label>
-                <input
-                  className="qd-input"
-                  value={rfc}
-                  onChange={(e) => setRfc(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="qd-label">Razón social</label>
-                <input
-                  className="qd-input"
-                  value={razonSocial}
-                  onChange={(e) => setRazonSocial(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="qd-label">Régimen fiscal</label>
-                <select
-                  className="qd-select"
-                  value={regimen}
-                  onChange={(e) => setRegimen(e.target.value)}
-                >
-                  <option value="">— Elegir —</option>
-                  <option value="601">601 - General de Ley Personas Morales</option>
-                  <option value="603">603 - Personas Morales Fines no Lucrativos</option>
-                  <option value="605">605 - Sueldos y Salarios</option>
-                  <option value="612">612 - Personas Físicas Actividad Empresarial</option>
-                  <option value="616">616 - Sin obligaciones fiscales</option>
-                  <option value="626">626 - Régimen Simplificado de Confianza</option>
-                </select>
-              </div>
-              <div>
-                <label className="qd-label">Uso de CFDI</label>
-                <select
-                  className="qd-select"
-                  value={usoCfdi}
-                  onChange={(e) => setUsoCfdi(e.target.value)}
-                >
-                  <option value="">— Elegir —</option>
-                  <option value="G01">G01 - Adquisición de mercancías</option>
-                  <option value="G03">G03 - Gastos en general</option>
-                  <option value="I08">I08 - Otra maquinaria y equipo</option>
-                  <option value="S01">S01 - Sin efectos fiscales</option>
-                  <option value="P01">P01 - Por definir</option>
-                </select>
-              </div>
-              <div>
-                <label className="qd-label">Código postal fiscal</label>
-                <input
-                  className="qd-input"
-                  value={cp}
-                  onChange={(e) => setCp(e.target.value)}
-                />
-              </div>
-            </div>
-            <button
-              className="qd-btn ghost"
-              onClick={guardarFiscal}
-              disabled={isSavingFiscal}
+            </s-paragraph>
+            <s-grid
+              gridTemplateColumns="repeat(auto-fit, minmax(220px, 1fr))"
+              gap="base"
             >
-              {isSavingFiscal ? "Guardando…" : "Guardar datos fiscales"}
-            </button>
-            {getAttr("CFDI UUID") ? (
-              <div className="qd-success">
-                ✅ Factura CFDI generada · Folio fiscal (UUID):{" "}
-                {getAttr("CFDI UUID")}
-              </div>
-            ) : (
-              <button
-                className="qd-btn primary"
-                onClick={generarCFDI}
-                disabled={isGenerating}
-                style={{ marginLeft: 10 }}
+              <s-text-field
+                label="RFC"
+                value={rfc}
+                onChange={(e: any) => setRfc(e.currentTarget.value)}
+              />
+              <s-text-field
+                label="Razón social"
+                value={razonSocial}
+                onChange={(e: any) => setRazonSocial(e.currentTarget.value)}
+              />
+              <s-select
+                label="Régimen fiscal"
+                value={regimen}
+                onChange={(e: any) => setRegimen(e.currentTarget.value)}
               >
-                {isGenerating ? "Timbrando…" : "Generar factura CFDI"}
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="qd-card qd-lock">
-            <h2>Datos fiscales (CFDI) · Plan Pro</h2>
-            <p className="qd-muted">
+                <s-option value="">— Elegir —</s-option>
+                <s-option value="601">601 - General de Ley Personas Morales</s-option>
+                <s-option value="603">603 - Personas Morales Fines no Lucrativos</s-option>
+                <s-option value="605">605 - Sueldos y Salarios</s-option>
+                <s-option value="612">612 - Personas Físicas Actividad Empresarial</s-option>
+                <s-option value="616">616 - Sin obligaciones fiscales</s-option>
+                <s-option value="626">626 - Régimen Simplificado de Confianza</s-option>
+              </s-select>
+              <s-select
+                label="Uso de CFDI"
+                value={usoCfdi}
+                onChange={(e: any) => setUsoCfdi(e.currentTarget.value)}
+              >
+                <s-option value="">— Elegir —</s-option>
+                <s-option value="G01">G01 - Adquisición de mercancías</s-option>
+                <s-option value="G03">G03 - Gastos en general</s-option>
+                <s-option value="I08">I08 - Otra maquinaria y equipo</s-option>
+                <s-option value="S01">S01 - Sin efectos fiscales</s-option>
+                <s-option value="P01">P01 - Por definir</s-option>
+              </s-select>
+              <s-text-field
+                label="Código postal fiscal"
+                value={cp}
+                onChange={(e: any) => setCp(e.currentTarget.value)}
+              />
+            </s-grid>
+            <s-stack direction="inline" gap="small-200">
+              <s-button onClick={guardarFiscal} loading={isSavingFiscal}>
+                Guardar datos fiscales
+              </s-button>
+              {!getAttr("CFDI UUID") ? (
+                <s-button
+                  variant="primary"
+                  onClick={generarCFDI}
+                  loading={isGenerating}
+                >
+                  Generar factura CFDI
+                </s-button>
+              ) : null}
+            </s-stack>
+            {getAttr("CFDI UUID") ? (
+              <s-banner tone="success" heading="Factura CFDI generada">
+                <s-paragraph>
+                  Folio fiscal (UUID): {getAttr("CFDI UUID")}
+                </s-paragraph>
+              </s-banner>
+            ) : null}
+          </s-stack>
+        </s-section>
+      ) : (
+        <s-section heading="Datos fiscales (CFDI)">
+          <s-stack gap="small-200">
+            <s-stack direction="inline">
+              <s-badge icon="lock" tone="info">Plan Pro</s-badge>
+            </s-stack>
+            <s-paragraph color="subdued">
               La facturación CFDI (datos fiscales y timbrado automático) está
               disponible en el Plan Pro.
-            </p>
-            <button
-              className="qd-btn primary"
-              onClick={() => navigate("/app/plans")}
-            >
-              Ver planes
-            </button>
-          </div>
-        )}
+            </s-paragraph>
+            <s-stack direction="inline">
+              <s-button variant="primary" onClick={() => navigate("/app/plans")}>
+                Ver planes
+              </s-button>
+            </s-stack>
+          </s-stack>
+        </s-section>
+      )}
 
-        {/* Productos y precios */}
-        <div className="qd-card">
-          <h2>Productos y precios negociados</h2>
+      {/* Productos y precios */}
+      <s-section heading="Productos y precios negociados">
+        <s-stack gap="base">
           {items.map((item: any, i: number) => (
-            <div className="qd-item" key={i}>
-              <div className="it-title">{item.title}</div>
-              <div className="qd-fields">
-                <div>
-                  <label className="qd-label" style={{ marginTop: 0 }}>
-                    Cantidad
-                  </label>
-                  <input
-                    className="qd-input"
-                    type="number"
-                    min={1}
-                    value={item.quantity}
-                    onChange={(e) => setQty(i, e.target.value)}
-                  />
-                </div>
+            <s-stack gap="small-200" key={i}>
+              {i > 0 ? <s-divider /> : null}
+              <s-text>{item.title}</s-text>
+              <s-stack direction="inline" gap="base" alignItems="end">
+                <s-number-field
+                  label="Cantidad"
+                  min={1}
+                  value={`${item.quantity}`}
+                  onChange={(e: any) => setQty(i, e.currentTarget.value)}
+                />
                 {item.variantId ? (
-                  <div>
-                    <label className="qd-label" style={{ marginTop: 0 }}>
-                      Precio unitario ({moneda})
-                    </label>
-                    <input
-                      className="qd-input"
-                      type="number"
-                      step="0.01"
-                      value={item.price}
-                      onChange={(e) => setPrice(i, e.target.value)}
-                    />
-                  </div>
+                  <s-number-field
+                    label={`Precio unitario (${moneda})`}
+                    step={0.01}
+                    value={`${item.price}`}
+                    onChange={(e: any) => setPrice(i, e.currentTarget.value)}
+                  />
                 ) : (
-                  <div className="qd-muted">
+                  <s-text color="subdued">
                     Precio: {item.price} {moneda} (sin variante)
-                  </div>
+                  </s-text>
                 )}
-              </div>
-              <button className="qd-rm" onClick={() => quitarItem(i)}>
-                Quitar
-              </button>
-            </div>
+                <s-button
+                  variant="tertiary"
+                  tone="critical"
+                  onClick={() => quitarItem(i)}
+                >
+                  Quitar
+                </s-button>
+              </s-stack>
+            </s-stack>
           ))}
 
-          <button className="qd-btn ghost" onClick={agregarProductos}>
-            + Agregar productos
-          </button>
+          <s-stack direction="inline" gap="small-200" alignItems="end">
+            <s-button icon="plus" onClick={agregarProductos}>
+              Agregar productos
+            </s-button>
+            <s-number-field
+              label="Descuento (%)"
+              min={0}
+              max={100}
+              value={discountPct}
+              onChange={(e: any) => setDiscountPct(e.currentTarget.value)}
+            />
+          </s-stack>
 
-          <label className="qd-label">Descuento (%)</label>
-          <input
-            className="qd-input"
-            type="number"
-            min={0}
-            max={100}
-            value={discountPct}
-            onChange={(e) => setDiscountPct(e.target.value)}
-            style={{ maxWidth: 180 }}
-          />
-
-          <p className="qd-muted" style={{ marginTop: 14 }}>
+          <s-text color="subdued">
             Total actual (guardado):{" "}
-            {formatoMoneda(quote.totalPriceSet.shopMoney.amount, moneda)} {moneda}
-          </p>
-          <div className="qd-actions">
-            <button
-              className="qd-btn primary"
+            {formatoMoneda(quote.totalPriceSet.shopMoney.amount, moneda)}{" "}
+            {moneda}
+          </s-text>
+          <s-stack direction="inline" gap="small-200">
+            <s-button
+              variant="primary"
               onClick={guardarCambios}
-              disabled={isSavingItems}
+              loading={isSavingItems}
             >
-              {isSavingItems ? "Guardando…" : "Guardar cambios"}
-            </button>
-            <button className="qd-btn secondary" onClick={descargarPDF}>
-              📄 Descargar PDF
-            </button>
-          </div>
-          <p className="qd-muted" style={{ marginTop: 8 }}>
-            El PDF usa lo que ves en pantalla. Guarda los cambios antes para que
-            el total coincida con lo guardado.
-          </p>
-        </div>
+              Guardar cambios
+            </s-button>
+            <s-button onClick={descargarPDF}>Descargar PDF</s-button>
+          </s-stack>
+          <s-text color="subdued">
+            El PDF usa lo que ves en pantalla. Guarda los cambios antes para
+            que el total coincida con lo guardado.
+          </s-text>
+        </s-stack>
+      </s-section>
 
-        {/* Estado del pedido */}
-        <div className="qd-card">
-          <h2>Estado del pedido</h2>
-          {yaEsPedido ? (
-            <div className="qd-success">
-              ✅ El cliente ya pagó esta cotización en el checkout de Shopify.
+      {/* Estado del pedido */}
+      <s-section heading="Estado del pedido">
+        {yaEsPedido ? (
+          <s-banner tone="success" heading="Cotización pagada">
+            <s-paragraph>
+              El cliente ya pagó esta cotización en el checkout de Shopify.
               Búscala en Shopify → Pedidos para surtirla.
-            </div>
-          ) : (
-            <p className="qd-muted">
-              Cuando el cliente acepte, comparte el <b>link de pago</b> de abajo:
-              paga de forma segura en el <b>checkout de Shopify</b> y el pedido
-              se crea automáticamente.
-              <br />
-              <br />
+            </s-paragraph>
+          </s-banner>
+        ) : (
+          <s-stack gap="small-200">
+            <s-paragraph color="subdued">
+              Cuando el cliente acepte, comparte el link de pago de abajo: paga
+              de forma segura en el checkout de Shopify y el pedido se crea
+              automáticamente.
+            </s-paragraph>
+            <s-paragraph color="subdued">
               ¿Venta a crédito (Net 30/60) o por transferencia? Completa el
-              pedido a mano desde <b>Shopify → Pedidos → Borradores</b>, donde
-              puedes marcarlo como pago pendiente.
-            </p>
-          )}
-        </div>
+              pedido a mano desde Shopify → Pedidos → Borradores, donde puedes
+              marcarlo como pago pendiente.
+            </s-paragraph>
+          </s-stack>
+        )}
+      </s-section>
 
-        {/* Link de pago */}
-        <div className="qd-card">
-          <h2>Link de pago para el cliente</h2>
-          {quote.invoiceUrl ? (
-            <>
-              <p className="qd-muted">
-                Comparte este link con el comprador para que pague la
-                cotización:
-              </p>
-              <div className="qd-actions">
-                <a
-                  className="qd-btn primary"
-                  href={quote.invoiceUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Abrir link de pago
-                </a>
-                <button className="qd-btn secondary" onClick={copiarLink}>
-                  Copiar link de pago
-                </button>
-              </div>
-              {quote.customer?.email ? (
-                hasPaid ? (
-                  <>
-                    <button
-                      className="qd-btn ghost"
-                      onClick={enviarAlCliente}
-                      disabled={isSending}
-                    >
-                      {isSending
-                        ? "Enviando…"
-                        : getAttr("Cotización enviada")
-                          ? "Reenviar al cliente por email"
-                          : "Enviar al cliente por email"}
-                    </button>
-                    {getAttr("Cotización enviada") ? (
-                      <p
-                        className="qd-muted"
-                        style={{
-                          marginTop: 8,
-                          color: "#15803d",
-                          fontWeight: 600,
-                        }}
-                      >
-                        ✓ Enviada al cliente el {getAttr("Cotización enviada")}
-                      </p>
-                    ) : null}
-                  </>
-                ) : (
-                  <p className="qd-muted" style={{ marginTop: 12 }}>
-                    🔒 Enviar la cotización por email está disponible desde el{" "}
-                    <b>Plan Básico</b>. Mientras tanto puedes copiar el link de
-                    arriba y mandarlo tú.{" "}
-                    <a
-                      href="/app/plans"
-                      style={{ color: "#1a56c4", fontWeight: 600 }}
-                    >
-                      Ver planes
-                    </a>
-                  </p>
-                )
+      {/* Link de pago */}
+      <s-section heading="Link de pago para el cliente">
+        {quote.invoiceUrl ? (
+          <s-stack gap="base">
+            <s-paragraph color="subdued">
+              Comparte este link con el comprador para que pague la cotización:
+            </s-paragraph>
+            <s-stack direction="inline" gap="small-200">
+              <s-button
+                variant="primary"
+                href={quote.invoiceUrl}
+                target="_blank"
+                icon="external"
+              >
+                Abrir link de pago
+              </s-button>
+              <s-button onClick={copiarLink}>Copiar link de pago</s-button>
+            </s-stack>
+            {quote.customer?.email ? (
+              hasPaid ? (
+                <s-stack gap="small-300">
+                  <s-stack direction="inline">
+                    <s-button onClick={enviarAlCliente} loading={isSending}>
+                      {getAttr("Cotización enviada")
+                        ? "Reenviar al cliente por email"
+                        : "Enviar al cliente por email"}
+                    </s-button>
+                  </s-stack>
+                  {getAttr("Cotización enviada") ? (
+                    <s-text tone="success">
+                      ✓ Enviada al cliente el {getAttr("Cotización enviada")}
+                    </s-text>
+                  ) : null}
+                </s-stack>
               ) : (
-                <p className="qd-muted">
-                  Asigna un cliente con correo para enviar la cotización por
-                  email.
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="qd-muted">
-              Esta cotización todavía no tiene link de pago.
-            </p>
-          )}
-        </div>
-      </div>
+                <s-paragraph color="subdued">
+                  🔒 Enviar la cotización por email está disponible desde el
+                  Plan Básico. Mientras tanto puedes copiar el link de arriba y
+                  mandarlo tú.{" "}
+                  <s-link onClick={() => navigate("/app/plans")}>
+                    Ver planes
+                  </s-link>
+                </s-paragraph>
+              )
+            ) : (
+              <s-paragraph color="subdued">
+                Asigna un cliente con correo para enviar la cotización por
+                email.
+              </s-paragraph>
+            )}
+          </s-stack>
+        ) : (
+          <s-paragraph color="subdued">
+            Esta cotización todavía no tiene link de pago.
+          </s-paragraph>
+        )}
+      </s-section>
     </s-page>
   );
 }

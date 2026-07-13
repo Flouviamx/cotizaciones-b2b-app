@@ -82,39 +82,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return redirect(`/app/quotes/${numericId}`);
 };
 
-const CSS = `
-.nq-wrap { max-width: 760px; margin: 0 auto; padding: 8px 16px 40px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; color: #1a1a2e; }
-.nq-card { background: #fff; border: 1px solid #ececf0; border-radius: 16px; padding: 22px;
-  margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
-.nq-card h2 { font-size: 16px; font-weight: 700; margin: 0 0 14px; }
-.nq-btn { border: 0; border-radius: 11px; padding: 11px 16px; font-size: 14px; font-weight: 700; cursor: pointer; }
-.nq-btn.primary { background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff; }
-.nq-btn.ghost { background: #fff; border: 1.5px solid #1a73e8; color: #1a73e8; }
-.nq-btn.ghost:hover { background: #f5f9ff; }
-.nq-item { display: flex; gap: 14px; align-items: center; padding: 12px; border: 1px solid #ececf0;
-  border-radius: 12px; margin-top: 10px; flex-wrap: wrap; }
-.nq-item img { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
-.nq-item .info { flex: 1; min-width: 140px; }
-.nq-item .info .t { font-size: 14px; font-weight: 600; }
-.nq-item .info .p { font-size: 13px; color: #6b7280; margin-top: 2px; }
-.nq-item .qty { width: 76px; padding: 8px; border: 1px solid #d8d8e0; border-radius: 9px; font-size: 14px; text-align: center; }
-.nq-item .rm { background: transparent; border: 0; color: #dc2626; font-size: 13px; font-weight: 600; cursor: pointer; }
-.nq-empty { text-align: center; color: #6b7280; padding: 28px; border: 1px dashed #d8d8e0; border-radius: 12px; margin-top: 12px; }
-.nq-total { margin-top: 14px; font-size: 15px; font-weight: 700; }
-.nq-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
-.nq-select { width: 100%; padding: 11px 12px; border: 1px solid #d8d8e0; border-radius: 10px; font-size: 14px;
-  background: #fff; color: #1a1a2e; outline: none; }
-.nq-select:focus { border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,.15); }
-.nq-limit { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; border-radius: 14px;
-  padding: 14px 16px; margin-bottom: 16px; font-size: 14px; line-height: 1.5; }
-.nq-limit b { display: block; margin-bottom: 2px; }
-.nq-limit-cta { display: inline-block; margin-top: 8px; color: #1a56c4; font-weight: 700; text-decoration: none; }
-.nq-limit-cta:hover { text-decoration: underline; }
-.nq-usage { font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 14px;
-  background: #f5f9ff; border: 1px solid #cfe0fc; border-radius: 10px; padding: 8px 12px; display: inline-block; }
-`;
-
 export default function NewQuote() {
   const { customers, currencyCode, limite } = useLoaderData<typeof loader>();
   const shopify = useAppBridge();
@@ -206,105 +173,124 @@ export default function NewQuote() {
         Crear cotización
       </s-button>
 
-      <style>{CSS}</style>
+      {/* Aviso de límite del Plan Gratis */}
+      {limite.bloqueado ? (
+        <s-banner
+          tone="warning"
+          heading={`Llegaste al límite del Plan Gratis (${limite.limite} cotizaciones)`}
+        >
+          <s-paragraph>
+            Marca alguna cotización como pagada para liberar espacio, o{" "}
+            <s-link href="/app/plans">mejora tu plan</s-link> para crear
+            cotizaciones ilimitadas.
+          </s-paragraph>
+        </s-banner>
+      ) : null}
 
-      <div className="nq-wrap">
-        {/* Aviso de límite del Plan Gratis */}
-        {limite.bloqueado ? (
-          <div className="nq-limit">
-            <b>Llegaste al límite del Plan Gratis ({limite.limite} cotizaciones)</b>
-            Marca alguna cotización como pagada para liberar espacio, o mejora tu
-            plan para crear cotizaciones <strong>ilimitadas</strong>.
-            <a href="/app/plans" className="nq-limit-cta">Ver planes →</a>
-          </div>
-        ) : !limite.paid ? (
-          <div className="nq-usage">
-            Plan Gratis · {limite.activas} de {limite.limite} cotizaciones activas
-          </div>
-        ) : null}
-
-        {/* Productos */}
-        <div className="nq-card">
-          <h2>Productos</h2>
-          <button className="nq-btn ghost" onClick={seleccionarProductos}>
-            + Seleccionar productos
-          </button>
+      {/* Productos */}
+      <s-section heading="Productos">
+        <s-stack gap="base">
+          {!limite.paid && !limite.bloqueado ? (
+            <s-text color="subdued">
+              Plan Gratis · {limite.activas} de {limite.limite} cotizaciones
+              activas
+            </s-text>
+          ) : null}
+          <s-stack direction="inline">
+            <s-button icon="plus" onClick={seleccionarProductos}>
+              Seleccionar productos
+            </s-button>
+          </s-stack>
 
           {items.length === 0 ? (
-            <div className="nq-empty">
+            <s-paragraph color="subdued">
               Aún no has agregado productos. Usa el botón de arriba.
-            </div>
+            </s-paragraph>
           ) : (
             items.map((it: any, i: number) => (
-              <div className="nq-item" key={it.variantId}>
-                {it.image ? <img src={it.image} alt={it.title} /> : null}
-                <div className="info">
-                  <div className="t">{it.title}</div>
-                  <div className="p">
-                    {Number(it.price).toFixed(2)} {currencyCode} c/u
-                  </div>
-                </div>
-                <input
-                  className="qty"
-                  type="number"
-                  min={1}
-                  value={it.quantity}
-                  onChange={(e) => setQty(i, e.target.value)}
-                />
-                <button className="rm" onClick={() => quitar(i)}>
-                  Quitar
-                </button>
-              </div>
+              <s-stack gap="small-200" key={it.variantId}>
+                {i > 0 ? <s-divider /> : null}
+                <s-stack
+                  direction="inline"
+                  gap="base"
+                  alignItems="center"
+                  justifyContent="space-between"
+                >
+                  <s-stack direction="inline" gap="base" alignItems="center">
+                    {it.image ? (
+                      <s-thumbnail src={it.image} alt={it.title} />
+                    ) : null}
+                    <s-stack gap="small-300">
+                      <s-text>{it.title}</s-text>
+                      <s-text color="subdued">
+                        {Number(it.price).toFixed(2)} {currencyCode} c/u
+                      </s-text>
+                    </s-stack>
+                  </s-stack>
+                  <s-stack direction="inline" gap="small-200" alignItems="end">
+                    <s-number-field
+                      label="Cantidad"
+                      min={1}
+                      value={`${it.quantity}`}
+                      onChange={(e: any) => setQty(i, e.currentTarget.value)}
+                    />
+                    <s-button
+                      variant="tertiary"
+                      tone="critical"
+                      onClick={() => quitar(i)}
+                    >
+                      Quitar
+                    </s-button>
+                  </s-stack>
+                </s-stack>
+              </s-stack>
             ))
           )}
 
           {items.length > 0 ? (
-            <div className="nq-total">
+            <s-text>
               {items.length} producto(s) · Total estimado: {total.toFixed(2)}{" "}
               {currencyCode}
-            </div>
+            </s-text>
           ) : null}
-        </div>
+        </s-stack>
+      </s-section>
 
-        {/* Términos de crédito */}
-        <div className="nq-card">
-          <h2>Términos de crédito</h2>
-          <label className="nq-label">Forma de pago</label>
-          <select
-            className="nq-select"
-            value={creditTerms}
-            onChange={(e) => setCreditTerms(e.target.value)}
+      {/* Términos de crédito */}
+      <s-section heading="Términos de crédito">
+        <s-select
+          label="Forma de pago"
+          value={creditTerms}
+          onChange={(e: any) => setCreditTerms(e.currentTarget.value)}
+        >
+          <s-option value="Contado">Contado (pago inmediato)</s-option>
+          <s-option value="Net 30">Net 30 (30 días)</s-option>
+          <s-option value="Net 60">Net 60 (60 días)</s-option>
+        </s-select>
+      </s-section>
+
+      {/* Cliente */}
+      <s-section heading="Cliente (opcional)">
+        {customers.length === 0 ? (
+          <s-paragraph color="subdued">
+            No hay clientes en la tienda. Puedes crear la cotización sin
+            cliente y asignarlo después.
+          </s-paragraph>
+        ) : (
+          <s-select
+            label="Cliente"
+            value={customerId}
+            onChange={(e: any) => setCustomerId(e.currentTarget.value)}
           >
-            <option value="Contado">Contado (pago inmediato)</option>
-            <option value="Net 30">Net 30 (30 días)</option>
-            <option value="Net 60">Net 60 (60 días)</option>
-          </select>
-        </div>
-
-        {/* Cliente */}
-        <div className="nq-card">
-          <h2>Cliente (opcional)</h2>
-          {customers.length === 0 ? (
-            <p style={{ color: "#6b7280", fontSize: 14 }}>
-              No hay clientes en la tienda. Puedes crear la cotización sin
-              cliente y asignarlo después.
-            </p>
-          ) : (
-            <select
-              className="nq-select"
-              value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-            >
-              <option value="">— Sin cliente —</option>
-              {customers.map((c: any) => (
-                <option key={c.id} value={c.id}>
-                  {c.displayName}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-      </div>
+            <s-option value="">— Sin cliente —</s-option>
+            {customers.map((c: any) => (
+              <s-option key={c.id} value={c.id}>
+                {c.displayName}
+              </s-option>
+            ))}
+          </s-select>
+        )}
+      </s-section>
     </s-page>
   );
 }

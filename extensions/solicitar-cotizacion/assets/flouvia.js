@@ -607,6 +607,28 @@
 
   // ---------- Inyección en tarjetas de producto ----------
   var DEFAULT_CARD_SELECTOR = '.card-wrapper, .product-card-wrapper, .grid-product, .product-card, .product-item';
+  var CARD_INFO_SELECTOR = '.card__content, .card-information, .product-card__info, .grid-product__meta';
+  // En Dawn hay DOS .card__content por tarjeta y el primero (dentro de .card__inner)
+  // está oculto por CSS (.card--standard.card--media .card__inner .card__information
+  // { display:none }). Elegir el ÚLTIMO contenedor visible, no el primero.
+  function visibleInfoHost(card) {
+    var nodes = card.querySelectorAll(CARD_INFO_SELECTOR);
+    var pick = null;
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].offsetParent !== null) pick = nodes[i];
+    }
+    return pick || (nodes.length ? nodes[nodes.length - 1] : null) || card;
+  }
+  function placeInCard(card, btn, position) {
+    if (position === 'overlay') {
+      var media = card.querySelector('.card__media, .card__inner, .media, .product-card__image, .grid-product__image');
+      var host = media || card;
+      host.classList.add('flouvia-card-host');
+      host.appendChild(btn);
+    } else {
+      visibleInfoHost(card).appendChild(btn);
+    }
+  }
   function makeCardButton(opts, handle) {
     var btn = document.createElement('button');
     btn.type = 'button';
@@ -623,15 +645,7 @@
   }
   function placeCardButton(card, opts, handle) {
     var btn = makeCardButton(opts, handle);
-    if (opts.position === 'overlay') {
-      var media = card.querySelector('.card__media, .card__inner, .media, .product-card__image, .grid-product__image');
-      var host = media || card;
-      host.classList.add('flouvia-card-host');
-      host.appendChild(btn);
-    } else {
-      var info = card.querySelector('.card__content, .card-information, .product-card__info, .grid-product__meta');
-      (info || card).appendChild(btn);
-    }
+    placeInCard(card, btn, opts.position);
   }
   function initCards(opts) {
     opts = opts || {};
@@ -998,13 +1012,7 @@
         btn.style.padding = (opts.paddingY != null ? opts.paddingY : 8) + 'px ' + (opts.paddingX != null ? opts.paddingX : 12) + 'px';
         if (opts.weight) btn.style.fontWeight = opts.weight;
         btn.textContent = opts.label || 'Agregar a cotización';
-        if (opts.position === 'overlay') {
-          var media = card.querySelector('.card__media, .card__inner, .media, .product-card__image, .grid-product__image');
-          var oh = media || card; oh.classList.add('flouvia-card-host'); oh.appendChild(btn);
-        } else {
-          var info = card.querySelector('.card__content, .card-information, .product-card__info, .grid-product__meta');
-          (info || card).appendChild(btn);
-        }
+        placeInCard(card, btn, opts.position);
       });
     }
     scan();

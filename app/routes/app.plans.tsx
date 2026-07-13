@@ -4,7 +4,7 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, useActionData, useLoaderData } from "react-router";
+import { useActionData, useLoaderData, useSubmit } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import {
@@ -109,13 +109,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     };
   }
 };
-
-const BENEFICIOS = [
-  { icon: "✉️", titulo: "Soporte por email" },
-  { icon: "🤝", titulo: "Solución B2B inteligente" },
-  { icon: "📚", titulo: "Documentación de ayuda" },
-  { icon: "🎨", titulo: "Estilo personalizable" },
-];
 
 const FEATURES_FREE = [
   `Hasta ${LIMITE_FREE} cotizaciones activas`,
@@ -386,132 +379,49 @@ const FAQS = [
   },
 ];
 
-const CSS = `
-.fp-wrap { max-width: 1180px; margin: 0 auto; padding: 8px 16px 40px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; color: #1a1a2e; }
-.fp-hero { text-align: center; padding: 16px 0 8px; }
-.fp-hero h1 { font-size: 30px; font-weight: 750; margin: 0 0 8px; letter-spacing: -0.02em; }
-.fp-hero p { color: #6b7280; font-size: 15px; margin: 0 0 20px; }
-
-.fp-toggle { display: inline-flex; background: #f1f1f4; border-radius: 999px; padding: 4px; gap: 4px; }
-.fp-toggle button { border: 0; background: transparent; padding: 9px 18px; border-radius: 999px;
-  font-size: 14px; font-weight: 600; color: #6b7280; cursor: pointer; transition: all .18s ease; }
-.fp-toggle button.on { background: #fff; color: #1a56c4; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
-.fp-save { margin-left: 6px; background: #dcfce7; color: #15803d; border-radius: 999px;
-  padding: 2px 8px; font-size: 11px; font-weight: 700; }
-
-.fp-benefits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 28px 0; }
-.fp-benefit { background: #fff; border: 1px solid #ececf0; border-radius: 14px; padding: 16px;
-  text-align: center; }
-.fp-benefit .ic { width: 42px; height: 42px; border-radius: 12px; margin: 0 auto 10px;
-  display: flex; align-items: center; justify-content: center; font-size: 20px;
-  background: linear-gradient(135deg, #e8f0fe, #eaf1fd); }
-.fp-benefit span { font-size: 13px; font-weight: 600; color: #374151; }
-
-.fp-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 18px; align-items: stretch; }
-.fp-card { position: relative; display: flex; flex-direction: column; box-sizing: border-box;
-  background: #fff; border: 1.5px solid #e7e7ee; border-radius: 20px; padding: 24px 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.05); transition: transform .2s ease, box-shadow .2s ease; }
-.fp-card:hover { transform: translateY(-3px); box-shadow: 0 14px 30px -12px rgba(0,0,0,.18); }
-.fp-card.pro { border-color: #1a73e8; box-shadow: 0 14px 34px -10px rgba(26,115,232,.35); }
-.fp-card.pro:hover { box-shadow: 0 20px 40px -12px rgba(26,115,232,.45); }
-.fp-card.plus { border-color: #5b3df5; background: linear-gradient(180deg, #fbfaff, #fff);
-  box-shadow: 0 14px 34px -10px rgba(91,61,245,.32); }
-.fp-card.plus:hover { box-shadow: 0 20px 40px -12px rgba(91,61,245,.45); }
-.fp-ribbon { position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-  background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff; font-size: 11.5px; font-weight: 800;
-  letter-spacing: .03em; text-transform: uppercase; padding: 5px 14px; border-radius: 999px;
-  box-shadow: 0 4px 12px rgba(26,115,232,.4); white-space: nowrap; }
-.fp-ribbon.plus { background: linear-gradient(135deg, #5b3df5, #8b5cf6); box-shadow: 0 4px 12px rgba(91,61,245,.4); }
-.fp-name { font-size: 20px; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
-.fp-tagline { font-size: 13px; color: #6b7280; font-weight: 500; margin: 3px 0 16px; }
-.fp-price { display: flex; align-items: baseline; gap: 6px; margin: 0 0 2px; }
-.fp-amount { font-size: 42px; font-weight: 800; letter-spacing: -0.03em; }
-.fp-period { color: #6b7280; font-size: 14px; font-weight: 500; }
-.fp-equiv { color: #16a34a; font-size: 13px; font-weight: 600; margin-bottom: 18px; min-height: 18px; }
-/* El form que envuelve el botón no debe romper la alineación de la fila CTA */
-.fp-card form { margin: 0; padding: 0; width: 100%; display: block; }
-.fp-cta { display: block; width: 100%; box-sizing: border-box; text-align: center; border: 0; border-radius: 12px;
-  padding: 13px; min-height: 48px; font-size: 15px; font-weight: 700; cursor: pointer; transition: opacity .15s ease; }
-.fp-cta:hover { opacity: .9; }
-.fp-cta.basic { background: #1a1a2e; color: #fff; }
-.fp-cta.downgrade { background: #fff; color: #374151; border: 1.5px solid #d1d5db; }
-.fp-cta.downgrade:hover { border-color: #9ca3af; opacity: 1; }
-.fp-cta.cancelar { background: #dc2626; color: #fff; }
-.fp-downgrade-back { display: block; width: 100%; margin-top: 8px; background: transparent;
-  border: 0; color: #6b7280; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px; }
-.fp-downgrade-back:hover { color: #374151; }
-.fp-downgrade-nota { font-size: 12px; color: #9ca3af; line-height: 1.45; margin: 8px 0 0; }
-.fp-cta.pro { background: linear-gradient(135deg, #1a73e8, #4285f4); color: #fff; }
-.fp-cta.plus { background: linear-gradient(135deg, #5b3df5, #8b5cf6); color: #fff; }
-.fp-locked { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; box-sizing: border-box;
-  text-align: center; border-radius: 12px; padding: 13px; min-height: 48px;
-  font-size: 13.5px; font-weight: 700; background: #f3f0ff; color: #6d5bd0; border: 1px dashed #c7bdf5; }
-.fp-current { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; box-sizing: border-box;
-  text-align: center; border-radius: 12px; padding: 13px; min-height: 48px;
-  font-size: 15px; font-weight: 700; background: #dcfce7; color: #15803d; }
-.fp-free-tag { display: flex; align-items: center; justify-content: center; width: 100%; box-sizing: border-box;
-  text-align: center; border-radius: 12px; padding: 13px; min-height: 48px;
-  font-size: 14px; font-weight: 700; background: #f1f1f4; color: #6b7280; }
-.fp-feats { list-style: none; padding: 0; margin: 22px 0 0; display: grid; gap: 12px; }
-.fp-feats li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #374151; }
-.fp-feats .chk { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 999px; background: #dcfce7;
-  color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; margin-top: 1px; }
-.fp-feats .label-row { font-weight: 700; color: #1a56c4; }
-
-/* Comparativa desplegable */
-.fp-cmp { margin-top: 34px; }
-.fp-cmp-toggle { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
-  background: #fff; border: 1.5px solid #e7e7ee; border-radius: 14px; padding: 15px 20px;
-  font-size: 15px; font-weight: 700; color: #1a56c4; cursor: pointer; transition: all .18s ease; }
-.fp-cmp-toggle:hover { border-color: #1a73e8; background: #f7faff; }
-.fp-cmp-chev { transition: transform .2s ease; font-size: 18px; }
-.fp-cmp-chev.open { transform: rotate(180deg); }
-.fp-cmp-table-wrap { margin-top: 14px; border: 1px solid #ececf0; border-radius: 16px; overflow: hidden;
-  overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,.05); animation: fp-cmp-in .22s ease; }
-@keyframes fp-cmp-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
-.fp-cmp-table { width: 100%; border-collapse: collapse; background: #fff; min-width: 560px; }
-.fp-cmp-table th { padding: 14px 16px; font-size: 14px; font-weight: 800; text-align: center;
-  color: #1a1a2e; background: #fafafc; border-bottom: 1px solid #ececf0; }
-.fp-cmp-table th.fp-cmp-feat-h { text-align: left; }
-.fp-cmp-table th.fp-cmp-pro-h { color: #1a56c4; }
-.fp-cmp-table th.fp-cmp-plus-h { color: #5b3df5; }
-.fp-cmp-table td { padding: 13px 16px; font-size: 13.5px; text-align: center; color: #374151;
-  border-bottom: 1px solid #f1f1f4; }
-.fp-cmp-table tr:last-child td { border-bottom: 0; }
-.fp-cmp-feat { text-align: left !important; font-weight: 600; color: #1a1a2e; }
-.fp-cmp-feat .fp-cmp-nota { display: block; font-size: 12px; font-weight: 400; color: #9ca3af; margin-top: 2px; }
-.fp-cmp-group td { background: #f7faff; font-size: 12px; font-weight: 800; text-transform: uppercase;
-  letter-spacing: .04em; color: #1a56c4; text-align: left; padding: 10px 16px; }
-.fp-cmp-pro-col { background: #f7faff; }
-.fp-cmp-plus-col { background: #faf8ff; }
-.fp-cmp-yes { color: #16a34a; font-weight: 800; font-size: 16px; }
-.fp-cmp-no { color: #cbd0d8; font-weight: 700; }
-.fp-cmp-val { font-weight: 700; color: #1a1a2e; }
-
-.fp-faq { margin-top: 40px; }
-.fp-faq h2 { font-size: 22px; font-weight: 750; margin: 0 0 16px; }
-.fp-q { background: #fff; border: 1px solid #ececf0; border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
-.fp-q button { width: 100%; text-align: left; background: transparent; border: 0; padding: 16px 18px;
-  font-size: 15px; font-weight: 600; color: #1a1a2e; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.fp-q .chev { transition: transform .2s ease; color: #9ca3af; flex: 0 0 auto; }
-.fp-q.open .chev { transform: rotate(180deg); }
-.fp-q .ans { padding: 0 18px 16px; color: #6b7280; font-size: 14px; line-height: 1.55; }
-
-@media (max-width: 1040px) {
-  .fp-cards { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 720px) {
-  .fp-benefits { grid-template-columns: repeat(2, 1fr); }
-  .fp-cards { grid-template-columns: 1fr; }
-  .fp-hero h1 { font-size: 24px; }
-}
-`;
-
 function celdaComparativa(valor: boolean | string) {
-  if (valor === true) return <span className="fp-cmp-yes">✓</span>;
-  if (valor === false) return <span className="fp-cmp-no">—</span>;
-  return <span className="fp-cmp-val">{valor}</span>;
+  if (valor === true) return <s-text tone="success">✓</s-text>;
+  if (valor === false) return <s-text color="subdued">—</s-text>;
+  return <s-text>{valor}</s-text>;
+}
+
+// Tarjeta de un plan (Polaris): borde propio dentro del grid de planes.
+function CardPlan(props: {
+  nombre: string;
+  tagline: string;
+  precioTexto: string;
+  periodo: string;
+  equivalencia?: string;
+  badge?: string;
+  cta: React.ReactNode;
+  features: string[];
+}) {
+  return (
+    <s-box border="base" borderRadius="base" padding="base">
+      <s-stack gap="small-200">
+        {props.badge ? (
+          <s-stack direction="inline">
+            <s-badge tone="info">{props.badge}</s-badge>
+          </s-stack>
+        ) : null}
+        <s-heading>{props.nombre}</s-heading>
+        <s-text color="subdued">{props.tagline}</s-text>
+        <s-stack direction="inline" gap="small-300" alignItems="baseline">
+          <s-heading>{props.precioTexto}</s-heading>
+          <s-text color="subdued">{props.periodo}</s-text>
+        </s-stack>
+        {props.equivalencia ? (
+          <s-text tone="success">{props.equivalencia}</s-text>
+        ) : null}
+        {props.cta}
+        <s-unordered-list>
+          {props.features.map((f) => (
+            <s-list-item key={f}>{f}</s-list-item>
+          ))}
+        </s-unordered-list>
+      </s-stack>
+    </s-box>
+  );
 }
 
 export default function Plans() {
@@ -519,6 +429,7 @@ export default function Plans() {
   const actionData = useActionData<typeof action>() as
     | { error?: string; cancelado?: boolean }
     | undefined;
+  const submit = useSubmit();
 
   const [intervalo, setIntervalo] = useState<"mensual" | "anual">("mensual");
   const [faqAbierta, setFaqAbierta] = useState<number | null>(0);
@@ -536,281 +447,254 @@ export default function Plans() {
   const precioPlus = esAnual ? PRECIO_PLUS_ANUAL : PRECIO_PLUS_MENSUAL;
   const periodo = esAnual ? "USD / año" : "USD / mes";
 
+  const elegirPlan = (plan: string) => submit({ plan }, { method: "post" });
+  const cancelarPlan = () =>
+    submit({ intent: "cancelar" }, { method: "post" });
+
+  const badgeActual = (
+    <s-stack direction="inline">
+      <s-badge tone="success">Tu plan actual</s-badge>
+    </s-stack>
+  );
+
   return (
     <s-page heading="Planes">
       {actionData?.error ? (
         <s-banner tone="critical" heading="No se pudo procesar el plan">
-          {actionData.error}
+          <s-paragraph>{actionData.error}</s-paragraph>
         </s-banner>
       ) : null}
       {actionData?.cancelado ? (
         <s-banner tone="success" heading="Plan cancelado">
-          Listo: tu suscripción se canceló y ahora estás en el Plan Gratis.
-          Puedes volver a un plan de pago cuando quieras desde esta página.
+          <s-paragraph>
+            Listo: tu suscripción se canceló y ahora estás en el Plan Gratis.
+            Puedes volver a un plan de pago cuando quieras desde esta página.
+          </s-paragraph>
         </s-banner>
       ) : null}
 
-      <style>{CSS}</style>
-
-      <div className="fp-wrap">
-        <div className="fp-hero">
-          <h1>Elige el plan ideal para tu negocio B2B</h1>
-          <p>Prueba gratis de 7 días · cambia o cancela cuando quieras</p>
-          <div className="fp-toggle">
-            <button
-              className={!esAnual ? "on" : ""}
+      <s-section heading="Elige el plan ideal para tu negocio B2B">
+        <s-stack gap="base">
+          <s-paragraph color="subdued">
+            Prueba gratis de 7 días · cambia o cancela cuando quieras. Con el
+            plan anual ahorras 17% (10 meses por el precio de 12).
+          </s-paragraph>
+          <s-stack direction="inline" gap="small-200">
+            <s-button
+              variant={!esAnual ? "primary" : "secondary"}
               onClick={() => setIntervalo("mensual")}
             >
               Mensual
-            </button>
-            <button
-              className={esAnual ? "on" : ""}
+            </s-button>
+            <s-button
+              variant={esAnual ? "primary" : "secondary"}
               onClick={() => setIntervalo("anual")}
             >
-              Anual <span className="fp-save">ahorra 17%</span>
-            </button>
-          </div>
-        </div>
+              Anual · ahorra 17%
+            </s-button>
+          </s-stack>
 
-        {/* Beneficios */}
-        <div className="fp-benefits">
-          {BENEFICIOS.map((b) => (
-            <div className="fp-benefit" key={b.titulo}>
-              <div className="ic">{b.icon}</div>
-              <span>{b.titulo}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Cards de planes */}
-        <div className="fp-cards">
-          {/* Gratis */}
-          <div className="fp-card">
-            <div className="fp-name">Gratis</div>
-            <div className="fp-tagline">Para empezar sin costo</div>
-            <div className="fp-price">
-              <span className="fp-amount">$0</span>
-              <span className="fp-period">para siempre</span>
-            </div>
-            <div className="fp-equiv">&nbsp;</div>
-            {esFree ? (
-              <div className="fp-current">Tu plan actual</div>
-            ) : confirmandoGratis ? (
-              <div>
-                <Form method="post">
-                  <input type="hidden" name="intent" value="cancelar" />
-                  <button type="submit" className="fp-cta cancelar">
-                    Sí, cancelar mi suscripción
-                  </button>
-                </Form>
-                <button
-                  className="fp-downgrade-back"
-                  onClick={() => setConfirmandoGratis(false)}
-                >
-                  No, conservar mi plan
-                </button>
-                <p className="fp-downgrade-nota">
-                  Se cancela tu plan de pago y pasas al Plan Gratis (tope de{" "}
-                  {LIMITE_FREE} cotizaciones activas). Tus cotizaciones no se
-                  borran.
-                </p>
-              </div>
-            ) : (
-              <button
-                className="fp-cta downgrade"
-                onClick={() => setConfirmandoGratis(true)}
-              >
-                Cambiar al plan Gratis
-              </button>
-            )}
-            <ul className="fp-feats">
-              {FEATURES_FREE.map((f) => (
-                <li key={f}>
-                  <span className="chk">✓</span> {f}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Básico */}
-          <div className="fp-card">
-            <div className="fp-name">Básico</div>
-            <div className="fp-tagline">Para vender en serio</div>
-            <div className="fp-price">
-              <span className="fp-amount">${precioBasico}</span>
-              <span className="fp-period">{periodo}</span>
-            </div>
-            <div className="fp-equiv">
-              {esAnual
-                ? `Equivale a $${(PRECIO_BASICO_ANUAL / 12).toFixed(2)}/mes`
-                : " "}
-            </div>
-            {activos.includes(planBasico) ? (
-              <div className="fp-current">Tu plan actual</div>
-            ) : (
-              <Form method="post">
-                <input type="hidden" name="plan" value={planBasico} />
-                <button type="submit" className="fp-cta basic">
-                  Elegir Básico
-                </button>
-              </Form>
-            )}
-            <ul className="fp-feats">
-              {FEATURES_BASICO.map((f) => (
-                <li key={f}>
-                  <span className="chk">✓</span> {f}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Pro */}
-          <div className="fp-card pro">
-            <div className="fp-ribbon">Más popular</div>
-            <div className="fp-name">Pro</div>
-            <div className="fp-tagline">Para escalar tu B2B</div>
-            <div className="fp-price">
-              <span className="fp-amount">${precioPro}</span>
-              <span className="fp-period">{periodo}</span>
-            </div>
-            <div className="fp-equiv">
-              {esAnual
-                ? `Equivale a $${(PRECIO_PRO_ANUAL / 12).toFixed(2)}/mes`
-                : " "}
-            </div>
-            {activos.includes(planPro) ? (
-              <div className="fp-current">Tu plan actual</div>
-            ) : (
-              <Form method="post">
-                <input type="hidden" name="plan" value={planPro} />
-                <button type="submit" className="fp-cta pro">
-                  Elegir Pro
-                </button>
-              </Form>
-            )}
-            <ul className="fp-feats">
-              {FEATURES_PRO.map((f, i) => (
-                <li key={f}>
-                  <span className="chk">✓</span>{" "}
-                  <span className={i === 0 ? "label-row" : ""}>{f}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Plus — solo Shopify Plus */}
-          <div className="fp-card plus">
-            <div className="fp-ribbon plus">Shopify Plus</div>
-            <div className="fp-name">Plus</div>
-            <div className="fp-tagline">Para alto volumen B2B</div>
-            <div className="fp-price">
-              <span className="fp-amount">${precioPlus}</span>
-              <span className="fp-period">{periodo}</span>
-            </div>
-            <div className="fp-equiv">
-              {esAnual
-                ? `Equivale a $${(PRECIO_PLUS_ANUAL / 12).toFixed(2)}/mes`
-                : " "}
-            </div>
-            {activos.includes(planPlus) ? (
-              <div className="fp-current">Tu plan actual</div>
-            ) : esShopifyPlus ? (
-              <Form method="post">
-                <input type="hidden" name="plan" value={planPlus} />
-                <button type="submit" className="fp-cta plus">
-                  Elegir Plus
-                </button>
-              </Form>
-            ) : (
-              <div className="fp-locked" title="Disponible solo para tiendas Shopify Plus">
-                🔒 Solo Shopify Plus
-              </div>
-            )}
-            <ul className="fp-feats">
-              {FEATURES_PLUS.map((f, i) => (
-                <li key={f}>
-                  <span className="chk">✓</span>{" "}
-                  <span className={i === 0 ? "label-row" : ""}>{f}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* Comparativa detallada (desplegable) */}
-        <div className="fp-cmp">
-          <button
-            className="fp-cmp-toggle"
-            onClick={() => setTablaAbierta((v) => !v)}
-            aria-expanded={tablaAbierta}
+          <s-grid
+            gridTemplateColumns="repeat(auto-fit, minmax(230px, 1fr))"
+            gap="base"
           >
-            <span>
-              {tablaAbierta ? "Ocultar" : "Ver"} comparación detallada de los
-              planes
-            </span>
-            <span className={`fp-cmp-chev ${tablaAbierta ? "open" : ""}`}>⌄</span>
-          </button>
+            {/* Gratis */}
+            <CardPlan
+              nombre="Gratis"
+              tagline="Para empezar sin costo"
+              precioTexto="$0"
+              periodo="para siempre"
+              features={FEATURES_FREE}
+              cta={
+                esFree ? (
+                  badgeActual
+                ) : confirmandoGratis ? (
+                  <s-stack gap="small-200">
+                    <s-button tone="critical" variant="primary" onClick={cancelarPlan}>
+                      Sí, cancelar mi suscripción
+                    </s-button>
+                    <s-button
+                      variant="tertiary"
+                      onClick={() => setConfirmandoGratis(false)}
+                    >
+                      No, conservar mi plan
+                    </s-button>
+                    <s-text color="subdued">
+                      Se cancela tu plan de pago y pasas al Plan Gratis (tope
+                      de {LIMITE_FREE} cotizaciones activas). Tus cotizaciones
+                      no se borran.
+                    </s-text>
+                  </s-stack>
+                ) : (
+                  <s-button onClick={() => setConfirmandoGratis(true)}>
+                    Cambiar al plan Gratis
+                  </s-button>
+                )
+              }
+            />
+
+            {/* Básico */}
+            <CardPlan
+              nombre="Básico"
+              tagline="Para vender en serio"
+              precioTexto={`$${precioBasico}`}
+              periodo={periodo}
+              equivalencia={
+                esAnual
+                  ? `Equivale a $${(PRECIO_BASICO_ANUAL / 12).toFixed(2)}/mes`
+                  : undefined
+              }
+              features={FEATURES_BASICO}
+              cta={
+                activos.includes(planBasico) ? (
+                  badgeActual
+                ) : (
+                  <s-button onClick={() => elegirPlan(planBasico)}>
+                    Elegir Básico
+                  </s-button>
+                )
+              }
+            />
+
+            {/* Pro */}
+            <CardPlan
+              nombre="Pro"
+              tagline="Para escalar tu B2B"
+              precioTexto={`$${precioPro}`}
+              periodo={periodo}
+              badge="Más popular"
+              equivalencia={
+                esAnual
+                  ? `Equivale a $${(PRECIO_PRO_ANUAL / 12).toFixed(2)}/mes`
+                  : undefined
+              }
+              features={FEATURES_PRO}
+              cta={
+                activos.includes(planPro) ? (
+                  badgeActual
+                ) : (
+                  <s-button variant="primary" onClick={() => elegirPlan(planPro)}>
+                    Elegir Pro
+                  </s-button>
+                )
+              }
+            />
+
+            {/* Plus — solo Shopify Plus */}
+            <CardPlan
+              nombre="Plus"
+              tagline="Para alto volumen B2B"
+              precioTexto={`$${precioPlus}`}
+              periodo={periodo}
+              badge="Shopify Plus"
+              equivalencia={
+                esAnual
+                  ? `Equivale a $${(PRECIO_PLUS_ANUAL / 12).toFixed(2)}/mes`
+                  : undefined
+              }
+              features={FEATURES_PLUS}
+              cta={
+                activos.includes(planPlus) ? (
+                  badgeActual
+                ) : esShopifyPlus ? (
+                  <s-button variant="primary" onClick={() => elegirPlan(planPlus)}>
+                    Elegir Plus
+                  </s-button>
+                ) : (
+                  <s-badge tone="neutral" icon="lock">
+                    Solo Shopify Plus
+                  </s-badge>
+                )
+              }
+            />
+          </s-grid>
+        </s-stack>
+      </s-section>
+
+      {/* Comparativa detallada (desplegable) */}
+      <s-section heading="Comparación detallada">
+        <s-stack gap="base">
+          <s-stack direction="inline">
+            <s-button onClick={() => setTablaAbierta((v) => !v)}>
+              {tablaAbierta ? "Ocultar comparación" : "Ver comparación de planes"}
+            </s-button>
+          </s-stack>
 
           {tablaAbierta ? (
-            <div className="fp-cmp-table-wrap">
-              <table className="fp-cmp-table">
-                <thead>
-                  <tr>
-                    <th className="fp-cmp-feat-h">Funcionalidad</th>
-                    <th>Gratis</th>
-                    <th>Básico</th>
-                    <th className="fp-cmp-pro-h">Pro</th>
-                    <th className="fp-cmp-plus-h">Plus</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {COMPARATIVA.map((g) => (
-                    <Fragment key={g.grupo}>
-                      <tr className="fp-cmp-group">
-                        <td colSpan={5}>{g.grupo}</td>
-                      </tr>
-                      {g.filas.map((fila) => (
-                        <tr key={fila.f}>
-                          <td className="fp-cmp-feat">
-                            {fila.f}
+            <s-table>
+              <s-table-header-row>
+                <s-table-header>Funcionalidad</s-table-header>
+                <s-table-header>Gratis</s-table-header>
+                <s-table-header>Básico</s-table-header>
+                <s-table-header>Pro</s-table-header>
+                <s-table-header>Plus</s-table-header>
+              </s-table-header-row>
+              <s-table-body>
+                {COMPARATIVA.map((g) => (
+                  <Fragment key={g.grupo}>
+                    <s-table-row>
+                      <s-table-cell>
+                        <s-badge tone="info">{g.grupo}</s-badge>
+                      </s-table-cell>
+                      <s-table-cell>{""}</s-table-cell>
+                      <s-table-cell>{""}</s-table-cell>
+                      <s-table-cell>{""}</s-table-cell>
+                      <s-table-cell>{""}</s-table-cell>
+                    </s-table-row>
+                    {g.filas.map((fila) => (
+                      <s-table-row key={fila.f}>
+                        <s-table-cell>
+                          <s-stack gap="small-300">
+                            <s-text>{fila.f}</s-text>
                             {fila.nota ? (
-                              <span className="fp-cmp-nota">{fila.nota}</span>
+                              <s-text color="subdued">{fila.nota}</s-text>
                             ) : null}
-                          </td>
-                          <td>{celdaComparativa(fila.free)}</td>
-                          <td>{celdaComparativa(fila.basico)}</td>
-                          <td className="fp-cmp-pro-col">
-                            {celdaComparativa(fila.pro)}
-                          </td>
-                          <td className="fp-cmp-plus-col">
-                            {celdaComparativa(fila.plus ?? fila.pro)}
-                          </td>
-                        </tr>
-                      ))}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          </s-stack>
+                        </s-table-cell>
+                        <s-table-cell>{celdaComparativa(fila.free)}</s-table-cell>
+                        <s-table-cell>
+                          {celdaComparativa(fila.basico)}
+                        </s-table-cell>
+                        <s-table-cell>{celdaComparativa(fila.pro)}</s-table-cell>
+                        <s-table-cell>
+                          {celdaComparativa(fila.plus ?? fila.pro)}
+                        </s-table-cell>
+                      </s-table-row>
+                    ))}
+                  </Fragment>
+                ))}
+              </s-table-body>
+            </s-table>
           ) : null}
-        </div>
+        </s-stack>
+      </s-section>
 
-        {/* FAQ */}
-        <div className="fp-faq">
-          <h2>Preguntas frecuentes</h2>
+      {/* FAQ */}
+      <s-section heading="Preguntas frecuentes">
+        <s-stack gap="base">
           {FAQS.map((f, i) => (
-            <div className={`fp-q ${faqAbierta === i ? "open" : ""}`} key={i}>
-              <button
+            <s-stack gap="small-300" key={f.q}>
+              {i > 0 ? <s-divider /> : null}
+              <s-clickable
                 onClick={() => setFaqAbierta(faqAbierta === i ? null : i)}
               >
-                <span>{f.q}</span>
-                <span className="chev">⌄</span>
-              </button>
-              {faqAbierta === i ? <div className="ans">{f.a}</div> : null}
-            </div>
+                <s-stack
+                  direction="inline"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  gap="small-200"
+                >
+                  <s-text>{f.q}</s-text>
+                  <s-icon type={faqAbierta === i ? "chevron-up" : "chevron-down"} />
+                </s-stack>
+              </s-clickable>
+              {faqAbierta === i ? (
+                <s-paragraph color="subdued">{f.a}</s-paragraph>
+              ) : null}
+            </s-stack>
           ))}
-        </div>
-      </div>
+        </s-stack>
+      </s-section>
     </s-page>
   );
 }

@@ -14,8 +14,7 @@
 // obtener llaves test+live → guardar.
 //
 // ⚠️ NO PROBADO en vivo todavía. Al timbrar puede haber que ajustar:
-//   - tax_included: se asume que el precio NO incluye IVA (se agrega 16% encima).
-//     Si tus precios en Shopify YA incluyen IVA, cambiar a tax_included: true.
+//   - tax_included: lo dicta shop.taxesIncluded (lo pasa el caller en opts.taxIncluded).
 //   - product_key 01010101 (genérica), unit_key H87 (Pieza).
 
 import * as FacturapiNS from "facturapi";
@@ -185,6 +184,9 @@ type TimbrarOpts = {
     taxZipCode: string;
   };
   items: { description: string; quantity: number; unitPrice: number }[];
+  /** true si los precios de la tienda YA incluyen IVA (shop.taxesIncluded):
+   *  Facturapi desglosa el impuesto del precio en vez de agregarlo encima. */
+  taxIncluded?: boolean;
 };
 
 export async function timbrarCFDI(
@@ -230,7 +232,9 @@ export async function timbrarCFDI(
       unit_key: "H87", // clave unidad SAT: Pieza
       unit_name: "Pieza",
       price: it.unitPrice,
-      tax_included: false, // el precio NO incluye IVA → Facturapi lo agrega encima
+      // Debe reflejar la configuración fiscal de la tienda: si sus precios ya
+      // incluyen IVA, se desglosa; si no, se agrega el 16% encima.
+      tax_included: opts.taxIncluded === true,
       taxability: "02", // 02 = sí objeto de impuesto
       taxes: [{ type: "IVA", rate: IVA }],
     },
