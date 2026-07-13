@@ -37,6 +37,7 @@ import {
   setLivemode,
   type OrgEstado,
 } from "../facturapi.server";
+import { Tabs } from "../components/Tabs";
 
 // La configuración se guarda como UN metafield JSON propio de la app
 // (namespace reservado "$app:flouvia"). Los metafields de la app no requieren
@@ -291,13 +292,13 @@ type TabId =
   | "credito"
   | "boton"
   | "pdf";
-const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "fiscal", label: "Datos fiscales", icon: "🧾" },
-  { id: "notificaciones", label: "Notificaciones", icon: "🔔" },
-  { id: "correos", label: "Correos", icon: "✉️" },
-  { id: "credito", label: "Crédito", icon: "💳" },
-  { id: "boton", label: "Botón en tienda", icon: "🛒" },
-  { id: "pdf", label: "PDF", icon: "📄" },
+const TABS: { id: TabId; label: string; dePago?: boolean }[] = [
+  { id: "fiscal", label: "Datos fiscales" },
+  { id: "notificaciones", label: "Notificaciones" },
+  { id: "correos", label: "Correos", dePago: true },
+  { id: "credito", label: "Crédito", dePago: true },
+  { id: "boton", label: "Botón en tienda" },
+  { id: "pdf", label: "PDF", dePago: true },
 ];
 
 function rfcEstado(rfc: string): "vacio" | "ok" | "mal" {
@@ -560,27 +561,19 @@ export default function Configuracion() {
         Inicio
       </s-button>
 
-      {/* Pestañas */}
-      <s-section accessibilityLabel="Secciones de configuración" padding="base">
-        <s-stack direction="inline" gap="small-200">
-          {TABS.map((t) => {
-            // Correos, Crédito y PDF son de pago (Plan Básico). Se ven siempre,
-            // pero con candado en el Plan Gratis.
-            const dePago =
-              t.id === "correos" || t.id === "credito" || t.id === "pdf";
-            return (
-              <s-button
-                key={t.id}
-                variant={tab === t.id ? "primary" : "secondary"}
-                icon={dePago && !hasPaid ? "lock" : undefined}
-                onClick={() => setTab(t.id)}
-              >
-                {t.label}
-              </s-button>
-            );
-          })}
-        </s-stack>
-      </s-section>
+      {/* Pestañas: Correos, Crédito y PDF son de pago (Plan Básico). Se ven
+          siempre, pero con candado en el Plan Gratis. */}
+      <s-box paddingBlockEnd="base">
+        <Tabs
+          tabs={TABS.map((t) => ({
+            id: t.id,
+            label: t.label,
+            badge: t.dePago && !hasPaid ? "🔒" : undefined,
+          }))}
+          value={tab}
+          onChange={setTab}
+        />
+      </s-box>
 
       {/* ---------- FISCAL ---------- */}
       {tab === "fiscal" ? (

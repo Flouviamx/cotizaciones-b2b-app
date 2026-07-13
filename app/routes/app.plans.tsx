@@ -385,9 +385,36 @@ function celdaComparativa(valor: boolean | string) {
   return <s-text>{valor}</s-text>;
 }
 
-// Tarjeta de un plan. El plan destacado lleva borde grueso + badge, como en las
-// páginas de precios del admin. El precio va en un tamaño mayor (única licencia
-// tipográfica: los precios son el dato que el comerciante compara de un vistazo).
+// Fila de una feature: palomita + texto. Compartida por la card compacta y la
+// hero.
+function Feature({ f }: { f: string }) {
+  return (
+    <s-stack direction="inline" gap="small-300" alignItems="start">
+      <s-icon type="check" tone="success" />
+      <s-text>{f}</s-text>
+    </s-stack>
+  );
+}
+
+// Precio grande: única licencia tipográfica de la página (los precios son el
+// dato que el comerciante compara de un vistazo). Hereda tipografía/color del
+// admin, solo cambia el tamaño.
+function PrecioGrande({ texto, size = "1.9rem" }: { texto: string; size?: string }) {
+  return (
+    <span
+      style={{
+        fontSize: size,
+        fontWeight: 700,
+        letterSpacing: "-0.02em",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      {texto}
+    </span>
+  );
+}
+
+// Tarjeta compacta de un plan (Gratis, Básico, Plus) — misma altura, en fila.
 function CardPlan(props: {
   nombre: string;
   tagline: string;
@@ -395,51 +422,29 @@ function CardPlan(props: {
   periodo: string;
   equivalencia?: string;
   badge?: string;
-  destacado?: boolean;
   cta: React.ReactNode;
   features: string[];
 }) {
   return (
-    <s-box
-      border={props.destacado ? "base strong" : "base"}
-      borderRadius="base"
-      padding="large-100"
-      background={props.destacado ? "subdued" : "base"}
-    >
+    <s-box border="base" borderRadius="base" padding="large-100">
       <s-stack gap="base">
         <s-stack gap="small-300">
           <s-stack direction="inline" gap="small-200" alignItems="center">
             <s-heading>{props.nombre}</s-heading>
-            {props.badge ? (
-              <s-badge tone={props.destacado ? "success" : "info"}>
-                {props.badge}
-              </s-badge>
-            ) : null}
+            {props.badge ? <s-badge tone="info">{props.badge}</s-badge> : null}
           </s-stack>
           <s-text color="subdued">{props.tagline}</s-text>
         </s-stack>
 
         <s-stack gap="small-300">
           <s-stack direction="inline" gap="small-300" alignItems="baseline">
-            {/* El precio es el dato que se compara de un vistazo: va más grande
-                que un heading. Es la única licencia tipográfica de la página;
-                hereda tipografía y color del admin. */}
-            <span
-              style={{
-                fontSize: "1.9rem",
-                fontWeight: 700,
-                letterSpacing: "-0.02em",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {props.precioTexto}
-            </span>
+            <PrecioGrande texto={props.precioTexto} />
             <s-text color="subdued">{props.periodo}</s-text>
           </s-stack>
           {props.equivalencia ? (
             <s-text tone="success">{props.equivalencia}</s-text>
           ) : (
-            <s-text color="subdued">Prueba gratis de 7 días</s-text>
+            <s-text color="subdued">&nbsp;</s-text>
           )}
         </s-stack>
 
@@ -449,18 +454,72 @@ function CardPlan(props: {
 
         <s-stack gap="small-300">
           {props.features.map((f) => (
-            <s-stack
-              key={f}
-              direction="inline"
-              gap="small-300"
-              alignItems="start"
-            >
-              <s-icon type="check" tone="success" />
-              <s-text>{f}</s-text>
-            </s-stack>
+            <Feature f={f} key={f} />
           ))}
         </s-stack>
       </s-stack>
+    </s-box>
+  );
+}
+
+// Tarjeta hero: el plan recomendado, a todo lo ancho, con features en dos
+// columnas (igual que las páginas de precios de otras apps del App Store).
+function CardPlanHero(props: {
+  nombre: string;
+  tagline: string;
+  precioTexto: string;
+  periodo: string;
+  equivalencia?: string;
+  cta: React.ReactNode;
+  features: string[];
+}) {
+  const mitad = Math.ceil(props.features.length / 2);
+  const col1 = props.features.slice(0, mitad);
+  const col2 = props.features.slice(mitad);
+  return (
+    <s-box
+      border="base strong"
+      borderRadius="base"
+      padding="large-200"
+      background="subdued"
+    >
+      <s-grid gridTemplateColumns="1fr 1.4fr" gap="large-100">
+        <s-stack gap="base">
+          <s-stack direction="inline" gap="small-200" alignItems="center">
+            <s-heading>{props.nombre}</s-heading>
+            <s-badge tone="success">Recomendado</s-badge>
+          </s-stack>
+          <s-text color="subdued">{props.tagline}</s-text>
+          <s-stack gap="small-300">
+            <s-stack direction="inline" gap="small-300" alignItems="baseline">
+              <PrecioGrande texto={props.precioTexto} size="2.6rem" />
+              <s-text color="subdued">{props.periodo}</s-text>
+            </s-stack>
+            {props.equivalencia ? (
+              <s-text tone="success">{props.equivalencia}</s-text>
+            ) : (
+              <s-text color="subdued">Prueba gratis de 7 días</s-text>
+            )}
+          </s-stack>
+          {props.cta}
+        </s-stack>
+
+        <s-grid
+          gridTemplateColumns="repeat(auto-fit, minmax(200px, 1fr))"
+          gap="small-300"
+        >
+          <s-stack gap="small-300">
+            {col1.map((f) => (
+              <Feature f={f} key={f} />
+            ))}
+          </s-stack>
+          <s-stack gap="small-300">
+            {col2.map((f) => (
+              <Feature f={f} key={f} />
+            ))}
+          </s-stack>
+        </s-grid>
+      </s-grid>
     </s-box>
   );
 }
@@ -540,6 +599,31 @@ export default function Plans() {
             </s-button>
           </s-stack>
 
+          {/* Pro: el plan recomendado va destacado y a todo lo ancho arriba,
+              como en las páginas de precios más convincentes del App Store. */}
+          <CardPlanHero
+            nombre="Pro"
+            tagline="Para escalar tu B2B"
+            precioTexto={`$${precioPro}`}
+            periodo={periodo}
+            equivalencia={
+              esAnual
+                ? `Equivale a $${(PRECIO_PRO_ANUAL / 12).toFixed(2)}/mes`
+                : undefined
+            }
+            features={FEATURES_PRO}
+            cta={
+              activos.includes(planPro) ? (
+                badgeActual
+              ) : (
+                <s-button variant="primary" onClick={() => elegirPlan(planPro)}>
+                  Iniciar prueba gratuita
+                </s-button>
+              )
+            }
+          />
+
+          {/* Los otros 3 planes, en fila, con el mismo peso visual entre sí. */}
           <s-grid
             gridTemplateColumns="repeat(auto-fit, minmax(230px, 1fr))"
             gap="base"
@@ -597,31 +681,6 @@ export default function Plans() {
                 ) : (
                   <s-button onClick={() => elegirPlan(planBasico)}>
                     Elegir Básico
-                  </s-button>
-                )
-              }
-            />
-
-            {/* Pro */}
-            <CardPlan
-              nombre="Pro"
-              tagline="Para escalar tu B2B"
-              precioTexto={`$${precioPro}`}
-              periodo={periodo}
-              badge="Recomendado"
-              destacado
-              equivalencia={
-                esAnual
-                  ? `Equivale a $${(PRECIO_PRO_ANUAL / 12).toFixed(2)}/mes`
-                  : undefined
-              }
-              features={FEATURES_PRO}
-              cta={
-                activos.includes(planPro) ? (
-                  badgeActual
-                ) : (
-                  <s-button variant="primary" onClick={() => elegirPlan(planPro)}>
-                    Iniciar prueba gratuita
                   </s-button>
                 )
               }

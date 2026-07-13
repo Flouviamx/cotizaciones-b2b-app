@@ -8,6 +8,7 @@ import { BILLING_TEST } from "../billing.server";
 import prisma from "../db.server";
 import { Progreso } from "../components/Progreso";
 import { Kpi } from "../components/Kpi";
+import { LineChart } from "../components/LineChart";
 
 // Paginamos los Draft Orders (hasta MAX_PAGES × 100) para que los KPIs sean
 // fieles aunque el comerciante tenga mucho volumen, y dejamos que el cliente
@@ -713,80 +714,22 @@ export default function Analitica() {
         <>
           {/* Tendencia de ingresos (adaptada al rango) */}
           <s-section heading="Monto cotizado vs cobrado">
-            <s-stack gap="base">
-              <s-stack direction="inline" gap="base">
-                <s-text color="subdued">🟦 Cotizado</s-text>
-                <s-text color="subdued">🟩 Cobrado</s-text>
-              </s-stack>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-end",
-                  gap: 8,
-                  height: 180,
-                  paddingTop: 22,
-                }}
-              >
-                {m.buckets.map((b, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      flex: 1,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 8,
-                      height: "100%",
-                      justifyContent: "flex-end",
-                      minWidth: 0,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "100%",
-                        maxWidth: 40,
-                        borderRadius: "7px 7px 0 0",
-                        minHeight: 3,
-                        position: "relative",
-                        background: "#2c6ecb",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "flex-end",
-                        overflow: "hidden",
-                        height: `${(b.cotizado / m.maxBucket) * 100}%`,
-                      }}
-                    >
-                      {b.cotizado > 0 ? (
-                        <span
-                          style={{
-                            position: "absolute",
-                            top: -19,
-                            left: -8,
-                            right: -8,
-                            textAlign: "center",
-                            fontSize: 10.5,
-                            fontWeight: 700,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {fmtCompact.format(b.cotizado)}
-                        </span>
-                      ) : null}
-                      <div
-                        style={{
-                          width: "100%",
-                          background: "#29845a",
-                          height: `${b.cotizado > 0 ? (b.cobrado / b.cotizado) * 100 : 0}%`,
-                        }}
-                      />
-                    </div>
-                    <span style={{ fontSize: 11, textTransform: "capitalize" }}>
-                      {b.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </s-stack>
+            <LineChart
+              categorias={m.buckets.map((b) => b.label)}
+              series={[
+                {
+                  label: "Cotizado",
+                  color: "#2c6ecb",
+                  valores: m.buckets.map((b) => b.cotizado),
+                },
+                {
+                  label: "Cobrado",
+                  color: "#29845a",
+                  valores: m.buckets.map((b) => b.cobrado),
+                },
+              ]}
+              formatoY={(v) => fmtCompact.format(v)}
+            />
           </s-section>
 
           {/* Embudo + top productos */}
