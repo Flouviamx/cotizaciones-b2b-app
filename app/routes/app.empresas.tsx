@@ -10,6 +10,8 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import { PLANES_PRO } from "../plans";
 import { BILLING_TEST } from "../billing.server";
+import { Progreso } from "../components/Progreso";
+import { Kpi } from "../components/Kpi";
 
 // El límite de crédito por empresa se guarda como metafield propio de la app
 // sobre la empresa (no requiere scope write_metafields).
@@ -256,17 +258,13 @@ function nivelCredito(usado: number, limite: number): "ok" | "warn" | "over" {
   return "ok";
 }
 
-// Barra de uso de crédito (visualización de datos; Polaris no trae charts).
+// Barra de uso de crédito: verde con margen, ámbar al 70%, rojo si se pasó.
 function BarraCredito({ usado, limite }: { usado: number; limite: number }) {
   const nivel = nivelCredito(usado, limite);
   const pct = limite > 0 ? Math.min(100, (usado / limite) * 100) : 0;
   const color =
     nivel === "over" ? "#c5280c" : nivel === "warn" ? "#b28400" : "#29845a";
-  return (
-    <div style={{ height: 8, background: "#e6e6e8", borderRadius: 999, overflow: "hidden" }}>
-      <div style={{ width: `${pct}%`, height: "100%", borderRadius: 999, background: color }} />
-    </div>
-  );
+  return <Progreso pct={pct} color={color} />;
 }
 
 type Empresa = ReturnType<typeof useLoaderData<typeof loader>>["empresas"][number];
@@ -423,35 +421,35 @@ export default function Empresas() {
           {/* KPIs de cartera */}
           <s-section accessibilityLabel="Resumen de cartera B2B">
             <s-grid
-              gridTemplateColumns="repeat(auto-fit, minmax(170px, 1fr))"
+              gridTemplateColumns="repeat(auto-fit, minmax(180px, 1fr))"
               gap="base"
             >
-              <s-stack gap="small-300">
-                <s-text color="subdued">Crédito otorgado</s-text>
-                <s-heading>{fmt.format(kpis.otorgado)}</s-heading>
-                <s-text color="subdued">{`${kpis.conLimite} empresas con límite`}</s-text>
-              </s-stack>
-              <s-stack gap="small-300">
-                <s-text color="subdued">Crédito en uso</s-text>
-                <s-heading>{fmt.format(kpis.enUso)}</s-heading>
-                <s-text color="subdued">cotizaciones activas sin cobrar</s-text>
-              </s-stack>
-              <s-stack gap="small-300">
-                <s-text color="subdued">Disponible</s-text>
-                <s-heading>{fmt.format(kpis.disponible)}</s-heading>
-                <s-text color="subdued">sobre el crédito otorgado</s-text>
-              </s-stack>
-              <s-stack gap="small-300">
-                <s-text color="subdued">Sobre su límite</s-text>
-                <s-stack direction="inline" gap="small-200" alignItems="center">
-                  <s-heading>{`${kpis.sobre}`}</s-heading>
-                  {kpis.sobre > 0 ? (
-                    <s-badge tone="critical">
-                      {kpis.sobre === 1 ? "empresa excedida" : "empresas excedidas"}
-                    </s-badge>
-                  ) : null}
-                </s-stack>
-              </s-stack>
+              <Kpi
+                label="Crédito otorgado"
+                value={fmt.format(kpis.otorgado)}
+                pie={`${kpis.conLimite} empresas con límite`}
+              />
+              <Kpi
+                label="Crédito en uso"
+                value={fmt.format(kpis.enUso)}
+                pie="cotizaciones activas sin cobrar"
+              />
+              <Kpi
+                label="Disponible"
+                value={fmt.format(kpis.disponible)}
+                pie="sobre el crédito otorgado"
+              />
+              <Kpi label="Sobre su límite" value={`${kpis.sobre}`}>
+                {kpis.sobre > 0 ? (
+                  <s-badge tone="critical">
+                    {kpis.sobre === 1
+                      ? "empresa excedida"
+                      : "empresas excedidas"}
+                  </s-badge>
+                ) : (
+                  <s-badge tone="success">Todo en orden</s-badge>
+                )}
+              </Kpi>
             </s-grid>
           </s-section>
 

@@ -16,6 +16,8 @@ import {
   TODOS_LOS_PLANES,
 } from "../plans";
 import { BILLING_TEST } from "../billing.server";
+import { evaluarLimite } from "../limites.server";
+import { Progreso } from "../components/Progreso";
 
 // Formatea un monto en la moneda BASE de la tienda (shopMoney) con separadores
 // de miles y el símbolo correcto. Shopify ya convirtió a la moneda del comerciante.
@@ -92,6 +94,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const quotes = (json.data?.draftOrders?.edges ?? []).map((e: any) => e.node);
   const shopName = json.data?.shop?.name ?? "";
 
+  // Uso del plan (cotizaciones activas vs. tope del Plan Gratis) para la
+  // tarjeta "Estado de tu cuenta" de la barra lateral.
+  const limite = await evaluarLimite(admin);
+
   // Autodetección del paso "Activa el botón": ¿llegó alguna solicitud desde la
   // tienda? Las cotizaciones del storefront traen customAttribute Origen.
   const botonActivo = quotes.some((q: any) =>
@@ -117,10 +123,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // de soltarlo en el editor genérico. Se abre en pestaña nueva, fuera del iframe.
   const themeEditorUrl = `https://${session.shop}/admin/themes/current/editor?context=apps`;
 
-  return { activos, quotes, shopName, botonActivo, fiscalListo, themeEditorUrl };
+  return {
+    activos,
+    quotes,
+    shopName,
+    botonActivo,
+    fiscalListo,
+    themeEditorUrl,
+    limite,
+  };
 };
 
-// Datos de presentación de cada plan (para la sección "Tu plan").
+// Datos de presentación del plan activo (para la barra lateral).
 function infoPlan(activos: string[]) {
   const nombre = activos[0] ?? null;
   if (!nombre) {
@@ -129,12 +143,6 @@ function infoPlan(activos: string[]) {
       precio: null as number | null,
       periodo: "",
       esPro: false,
-      features: [
-        "Hasta 5 cotizaciones activas",
-        'Botón "Solicitar cotización" en la tienda',
-        "Precios negociados y descuentos",
-        "Link de pago vía checkout de Shopify",
-      ],
     };
   }
   const esPro = PLANES_PRO.includes(nombre);
@@ -145,26 +153,11 @@ function infoPlan(activos: string[]) {
   else if (nombre === PLAN_PRO_MENSUAL) precio = PRECIO_PRO_MENSUAL;
   else if (nombre === PLAN_PRO_ANUAL) precio = PRECIO_PRO_ANUAL;
 
-  const features = esPro
-    ? [
-        "Cotizaciones ilimitadas",
-        "CFDI — facturación electrónica automática",
-        "Avisos por email al recibir solicitudes",
-        "Empresas B2B con crédito por empresa",
-      ]
-    : [
-        "Cotizaciones ilimitadas",
-        'Botón "Solicitar cotización" en la tienda',
-        "Precios negociados y descuentos",
-        "Términos de crédito (Net 30 / Net 60)",
-      ];
-
   return {
     nombre,
     precio,
     periodo: esAnual ? "USD / año" : "USD / mes",
     esPro,
-    features,
   };
 }
 
@@ -172,8 +165,15 @@ function infoPlan(activos: string[]) {
 const PASOS_MANUALES = ["boton", "cfdi"];
 
 export default function Inicio() {
-  const { activos, quotes, shopName, botonActivo, fiscalListo, themeEditorUrl } =
-    useLoaderData<typeof loader>();
+  const {
+    activos,
+    quotes,
+    shopName,
+    botonActivo,
+    fiscalListo,
+    themeEditorUrl,
+    limite,
+  } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
 
   const plan = infoPlan(activos);
@@ -202,23 +202,14 @@ export default function Inicio() {
     });
   };
 
+  const botonListo = botonActivo || !!manuales.boton;
+
   const pasos = [
-    {
-      id: "plan",
-      titulo: "Activa tu plan",
-      desc:
-        activos.length > 0
-          ? `¡Listo! Ya tienes el plan ${plan.nombre} activo. Tu prueba gratis de 7 días corre desde hoy.`
-          : "Puedes usar el Plan Gratis desde hoy, o elegir un plan de pago para desbloquear todas las herramientas de cotización.",
-      done: activos.length > 0,
-      auto: true,
-      cta: activos.length > 0 ? undefined : { label: "Ver planes", to: "/app/plans" },
-    },
     {
       id: "boton",
       titulo: 'Activa el botón "Solicitar cotización" en tu tienda',
-      desc: "Abre el editor de temas, entra a una página de producto y agrega el bloque «Solicitar cotización» de Flouvia. Así tus clientes B2B podrán pedir cotizaciones desde la tienda. Cuando llegue la primera solicitud, este paso se marcará solo.",
-      done: botonActivo || !!manuales.boton,
+      desc: "Abre el editor de temas y enciende la incrustación de Flouvia. Así tus clientes B2B podrán pedir cotizaciones desde tu tienda. Cuando llegue la primera solicitud, este paso se marca solo.",
+      done: botonListo,
       auto: botonActivo,
       manual: !botonActivo,
       linkExterno: { label: "Abrir editor de temas", href: themeEditorUrl },
@@ -226,7 +217,7 @@ export default function Inicio() {
     {
       id: "cotizacion",
       titulo: "Crea tu primera cotización",
-      desc: "Arma una cotización manual: elige productos, pon precios negociados y descuentos, y genera el link de pago para tu cliente.",
+      desc: "Elige productos, pon precios negociados y descuentos, y genera el link de pago para tu cliente.",
       done: tieneCotizaciones,
       auto: true,
       cta: { label: "Crear cotización", to: "/app/quotes/new" },
@@ -234,20 +225,41 @@ export default function Inicio() {
     {
       id: "cfdi",
       titulo: "Configura tu facturación CFDI",
-      desc: "Llena tus datos fiscales (RFC, razón social y régimen) en Configuración. Con eso, al cerrar una cotización podrás timbrar la factura CFDI 4.0 automáticamente. Al guardar tu RFC, este paso se marca solo.",
+      desc: "Captura tu RFC, razón social y régimen fiscal. Con eso podrás timbrar facturas CFDI 4.0 automáticamente al cerrar una cotización.",
       done: fiscalListo || !!manuales.cfdi,
       auto: fiscalListo,
       manual: !fiscalListo,
       cta: { label: "Configurar datos fiscales", to: "/app/configuracion" },
       pro: true,
     },
+    {
+      id: "plan",
+      titulo: "Elige el plan que necesitas",
+      desc:
+        activos.length > 0
+          ? `Ya tienes el plan ${plan.nombre} activo.`
+          : "Estás en el Plan Gratis (hasta 5 cotizaciones activas). Mejora tu plan cuando lo necesites — cancela cuando quieras.",
+      done: activos.length > 0,
+      auto: true,
+      cta: { label: "Ver planes", to: "/app/plans" },
+    },
   ];
 
   const completados = pasos.filter((p) => p.done).length;
   const total = pasos.length;
+  const pctOnboarding = Math.round((completados / total) * 100);
+
+  // Uso de cotizaciones del Plan Gratis (barra lateral).
+  const pctUso =
+    limite.paid || limite.limite === 0
+      ? 0
+      : Math.min(100, (limite.activas / limite.limite) * 100);
 
   return (
-    <s-page heading={`¡Bienvenido${shopName ? `, ${shopName}` : ""}!`}>
+    <s-page heading={shopName ? `Hola, ${shopName}` : "Inicio"}>
+      <s-badge slot="accessory" tone={plan.esPro ? "success" : "info"}>
+        {`Plan ${plan.nombre}`}
+      </s-badge>
       <s-button
         slot="primary-action"
         variant="primary"
@@ -256,51 +268,64 @@ export default function Inicio() {
         Nueva cotización
       </s-button>
 
-      {/* Guía de primeros pasos */}
-      <s-section heading="Primeros pasos">
-        <s-stack gap="base">
-          <s-stack
-            direction="inline"
-            gap="small-200"
-            justifyContent="space-between"
-            alignItems="center"
+      {/* Acción requerida: sin el botón activo en la tienda, la app no recibe
+          solicitudes. Es lo primero que debe resolver el comerciante. */}
+      {!botonListo ? (
+        <s-banner tone="warning" heading="Acción requerida">
+          <s-paragraph>
+            Para que Flouvia funcione en tu tienda, activa la incrustación de la
+            app en el editor de temas. Sin esto, tus clientes no verán el botón
+            para solicitar cotizaciones.
+          </s-paragraph>
+          <s-button
+            slot="primary-action"
+            href={themeEditorUrl}
+            target="_blank"
+            variant="primary"
           >
-            <s-paragraph>
-              Sigue estos pasos para empezar a recibir y gestionar solicitudes
-              de tus clientes.
+            Activar ahora
+          </s-button>
+        </s-banner>
+      ) : null}
+
+      {/* Guía de primeros pasos con barra de progreso */}
+      <s-section heading="Primeros pasos">
+        <s-stack gap="large-100">
+          <s-stack gap="small-200">
+            <s-paragraph color="subdued">
+              Configura tu portal de cotizaciones B2B en cuatro pasos.
             </s-paragraph>
-            <s-badge tone={completados === total ? "success" : "info"}>
-              {`${completados} de ${total} completados`}
-            </s-badge>
+            <s-stack
+              direction="inline"
+              gap="base"
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <s-text>
+                {completados} de {total} tareas completadas
+              </s-text>
+              <s-text color="subdued">{`${pctOnboarding}%`}</s-text>
+            </s-stack>
+            <Progreso pct={pctOnboarding} />
           </s-stack>
 
           {pasos.map((p, i) => (
             <s-stack gap="small-200" key={p.id}>
               <s-divider />
-              <s-stack
-                direction="inline"
-                gap="small-200"
-                alignItems="center"
-              >
+              <s-stack direction="inline" gap="small-200" alignItems="center">
                 <s-badge tone={p.done ? "success" : "neutral"}>
                   {p.done ? "✓" : `${i + 1}`}
                 </s-badge>
                 <s-heading>{p.titulo}</s-heading>
-                {p.pro ? <s-badge tone="info">Plan Pro</s-badge> : null}
+                {p.pro ? <s-badge tone="info">Pro</s-badge> : null}
               </s-stack>
               <s-paragraph color="subdued">{p.desc}</s-paragraph>
               <s-stack direction="inline" gap="small-200" alignItems="center">
-                {/* Acción interna (navegar dentro de la app) */}
                 {p.cta && !p.done ? (
-                  <s-button
-                    variant="primary"
-                    onClick={() => navigate(p.cta!.to)}
-                  >
+                  <s-button onClick={() => navigate(p.cta!.to)}>
                     {p.cta.label}
                   </s-button>
                 ) : null}
-                {/* Acción externa (abre el admin de Shopify en pestaña nueva,
-                    fuera del iframe — un redirect aquí sale bloqueado) */}
                 {p.linkExterno && !p.done ? (
                   <s-button
                     href={p.linkExterno.href}
@@ -310,19 +335,17 @@ export default function Inicio() {
                     {p.linkExterno.label}
                   </s-button>
                 ) : null}
-                {/* Respaldo manual si no se pudo autodetectar */}
                 {p.manual && !p.done ? (
                   <s-button variant="tertiary" onClick={() => marcar(p.id)}>
                     Ya lo hice
                   </s-button>
                 ) : null}
-                {/* Estados de "hecho" */}
                 {p.done && p.auto ? (
-                  <s-badge tone="success">
+                  <s-text color="subdued">
                     {PASOS_MANUALES.includes(p.id)
                       ? "Detectado automáticamente"
                       : "Completado"}
-                  </s-badge>
+                  </s-text>
                 ) : null}
                 {p.done && !p.auto ? (
                   <s-button variant="tertiary" onClick={() => marcar(p.id)}>
@@ -335,41 +358,20 @@ export default function Inicio() {
         </s-stack>
       </s-section>
 
-      {/* Tu plan */}
-      <s-section heading="Tu plan">
-        <s-stack gap="base">
-          <s-stack direction="inline" gap="small-200" alignItems="center">
-            <s-heading>{plan.nombre}</s-heading>
-            {plan.esPro ? <s-badge tone="success">Pro</s-badge> : null}
-          </s-stack>
-          {plan.precio != null ? (
-            <s-paragraph color="subdued">
-              {`$${plan.precio} ${plan.periodo} · prueba gratis de 7 días`}
-            </s-paragraph>
-          ) : (
-            <s-paragraph color="subdued">
-              Sin costo. Cambia de plan cuando quieras.
-            </s-paragraph>
-          )}
-          <s-unordered-list>
-            {plan.features.map((f) => (
-              <s-list-item key={f}>{f}</s-list-item>
-            ))}
-          </s-unordered-list>
-          <s-stack direction="inline">
-            <s-button onClick={() => navigate("/app/plans")}>
-              {plan.esPro ? "Administrar plan" : "Ver planes"}
-            </s-button>
-          </s-stack>
-        </s-stack>
-      </s-section>
-
       {/* Actividad reciente */}
       <s-section heading="Actividad reciente">
+        <s-button
+          slot="primary-action"
+          variant="tertiary"
+          onClick={() => navigate("/app/quotes")}
+        >
+          Ver todas
+        </s-button>
         {quotes.length === 0 ? (
           <s-stack gap="small-200">
             <s-paragraph color="subdued">
-              Todavía no hay cotizaciones. Crea la primera para verla aquí.
+              Todavía no hay cotizaciones. Crea la primera o espera a que un
+              cliente la solicite desde tu tienda.
             </s-paragraph>
             <s-stack direction="inline">
               <s-button onClick={() => navigate("/app/quotes/new")}>
@@ -420,64 +422,83 @@ export default function Inicio() {
                 </s-stack>
               );
             })}
-            <s-stack direction="inline">
-              <s-button
-                variant="tertiary"
-                onClick={() => navigate("/app/quotes")}
-              >
-                Ver todas las cotizaciones
-              </s-button>
-            </s-stack>
           </s-stack>
         )}
       </s-section>
 
-      {/* Ayuda */}
-      <s-section heading="¿Necesitas ayuda?">
-        <s-grid
-          gridTemplateColumns="repeat(auto-fit, minmax(220px, 1fr))"
-          gap="base"
-        >
+      {/* ---------------- Barra lateral ---------------- */}
+      <s-stack slot="aside" gap="base">
+        {/* Estado de la cuenta */}
+        <s-section heading="Estado de tu cuenta">
+          <s-stack gap="base">
+            <s-stack direction="inline" gap="small-200" alignItems="center">
+              <s-text color="subdued">Plan actual:</s-text>
+              <s-badge tone={plan.esPro ? "success" : "info"}>
+                {plan.nombre}
+              </s-badge>
+            </s-stack>
+            {plan.precio != null ? (
+              <s-text color="subdued">
+                {`$${plan.precio} ${plan.periodo}`}
+              </s-text>
+            ) : null}
+
+            {limite.paid ? (
+              <s-stack gap="small-300">
+                <s-text color="subdued">Cotizaciones: ilimitadas</s-text>
+              </s-stack>
+            ) : (
+              <s-stack gap="small-300">
+                <s-stack direction="inline" justifyContent="space-between">
+                  <s-text color="subdued">Cotizaciones activas</s-text>
+                  <s-text fontVariantNumeric="tabular-nums">
+                    {`${limite.activas} / ${limite.limite}`}
+                  </s-text>
+                </s-stack>
+                <Progreso
+                  pct={pctUso}
+                  color={pctUso >= 100 ? "#c5280c" : undefined}
+                />
+                {limite.bloqueado ? (
+                  <s-text tone="critical">
+                    Llegaste al tope del Plan Gratis. Marca cotizaciones como
+                    pagadas o mejora tu plan.
+                  </s-text>
+                ) : null}
+              </s-stack>
+            )}
+
+            <s-button onClick={() => navigate("/app/plans")}>
+              {limite.paid ? "Administrar plan" : "Actualizar plan"}
+            </s-button>
+          </s-stack>
+        </s-section>
+
+        {/* Centro de soporte */}
+        <s-section heading="Centro de soporte">
           <s-stack gap="small-200">
-            <s-heading>Soporte por email</s-heading>
             <s-paragraph color="subdued">
-              Escríbenos desde la app y te respondemos en menos de 24 horas
-              hábiles, en español.
+              ¿Dudas o problemas? Te respondemos en menos de 24 horas hábiles,
+              en español.
             </s-paragraph>
             <s-stack direction="inline">
               <s-button onClick={() => navigate("/app/contacto")}>
-                Escribir a soporte
+                Contactar soporte
               </s-button>
             </s-stack>
+            <s-divider />
+            <s-link onClick={() => navigate("/app/configuracion")}>
+              Configuración de la app
+            </s-link>
+            <s-link onClick={() => navigate("/app/formulario")}>
+              Personalizar el formulario
+            </s-link>
+            <s-link href={themeEditorUrl} target="_blank">
+              Editor de temas
+            </s-link>
           </s-stack>
-
-          <s-stack gap="small-200">
-            <s-heading>Configura tu app</s-heading>
-            <s-paragraph color="subdued">
-              Personaliza los correos, el PDF, tus datos fiscales y el botón de
-              la tienda.
-            </s-paragraph>
-            <s-stack direction="inline">
-              <s-button onClick={() => navigate("/app/configuracion")}>
-                Abrir configuración
-              </s-button>
-            </s-stack>
-          </s-stack>
-
-          <s-stack gap="small-200">
-            <s-heading>Guía rápida</s-heading>
-            <s-paragraph color="subdued">
-              Aprende a crear cotizaciones, manejar crédito B2B y facturar con
-              CFDI.
-            </s-paragraph>
-            <s-stack direction="inline">
-              <s-button onClick={() => navigate("/app/quotes/new")}>
-                Crear mi primera cotización
-              </s-button>
-            </s-stack>
-          </s-stack>
-        </s-grid>
-      </s-section>
+        </s-section>
+      </s-stack>
     </s-page>
   );
 }

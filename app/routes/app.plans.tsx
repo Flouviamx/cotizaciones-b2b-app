@@ -385,7 +385,9 @@ function celdaComparativa(valor: boolean | string) {
   return <s-text>{valor}</s-text>;
 }
 
-// Tarjeta de un plan (Polaris): borde propio dentro del grid de planes.
+// Tarjeta de un plan. El plan destacado lleva borde grueso + badge, como en las
+// páginas de precios del admin. El precio va en un tamaño mayor (única licencia
+// tipográfica: los precios son el dato que el comerciante compara de un vistazo).
 function CardPlan(props: {
   nombre: string;
   tagline: string;
@@ -393,32 +395,71 @@ function CardPlan(props: {
   periodo: string;
   equivalencia?: string;
   badge?: string;
+  destacado?: boolean;
   cta: React.ReactNode;
   features: string[];
 }) {
   return (
-    <s-box border="base" borderRadius="base" padding="base">
-      <s-stack gap="small-200">
-        {props.badge ? (
-          <s-stack direction="inline">
-            <s-badge tone="info">{props.badge}</s-badge>
+    <s-box
+      border={props.destacado ? "base strong" : "base"}
+      borderRadius="base"
+      padding="large-100"
+      background={props.destacado ? "subdued" : "base"}
+    >
+      <s-stack gap="base">
+        <s-stack gap="small-300">
+          <s-stack direction="inline" gap="small-200" alignItems="center">
+            <s-heading>{props.nombre}</s-heading>
+            {props.badge ? (
+              <s-badge tone={props.destacado ? "success" : "info"}>
+                {props.badge}
+              </s-badge>
+            ) : null}
           </s-stack>
-        ) : null}
-        <s-heading>{props.nombre}</s-heading>
-        <s-text color="subdued">{props.tagline}</s-text>
-        <s-stack direction="inline" gap="small-300" alignItems="baseline">
-          <s-heading>{props.precioTexto}</s-heading>
-          <s-text color="subdued">{props.periodo}</s-text>
+          <s-text color="subdued">{props.tagline}</s-text>
         </s-stack>
-        {props.equivalencia ? (
-          <s-text tone="success">{props.equivalencia}</s-text>
-        ) : null}
+
+        <s-stack gap="small-300">
+          <s-stack direction="inline" gap="small-300" alignItems="baseline">
+            {/* El precio es el dato que se compara de un vistazo: va más grande
+                que un heading. Es la única licencia tipográfica de la página;
+                hereda tipografía y color del admin. */}
+            <span
+              style={{
+                fontSize: "1.9rem",
+                fontWeight: 700,
+                letterSpacing: "-0.02em",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {props.precioTexto}
+            </span>
+            <s-text color="subdued">{props.periodo}</s-text>
+          </s-stack>
+          {props.equivalencia ? (
+            <s-text tone="success">{props.equivalencia}</s-text>
+          ) : (
+            <s-text color="subdued">Prueba gratis de 7 días</s-text>
+          )}
+        </s-stack>
+
         {props.cta}
-        <s-unordered-list>
+
+        <s-divider />
+
+        <s-stack gap="small-300">
           {props.features.map((f) => (
-            <s-list-item key={f}>{f}</s-list-item>
+            <s-stack
+              key={f}
+              direction="inline"
+              gap="small-300"
+              alignItems="start"
+            >
+              <s-icon type="check" tone="success" />
+              <s-text>{f}</s-text>
+            </s-stack>
           ))}
-        </s-unordered-list>
+        </s-stack>
       </s-stack>
     </s-box>
   );
@@ -457,8 +498,13 @@ export default function Plans() {
     </s-stack>
   );
 
+  const planActivoNombre = activos[0] ?? "Gratis";
+
   return (
     <s-page heading="Planes">
+      <s-badge slot="accessory" tone={esFree ? "info" : "success"}>
+        {`Plan actual: ${planActivoNombre}`}
+      </s-badge>
       {actionData?.error ? (
         <s-banner tone="critical" heading="No se pudo procesar el plan">
           <s-paragraph>{actionData.error}</s-paragraph>
@@ -562,7 +608,8 @@ export default function Plans() {
               tagline="Para escalar tu B2B"
               precioTexto={`$${precioPro}`}
               periodo={periodo}
-              badge="Más popular"
+              badge="Recomendado"
+              destacado
               equivalencia={
                 esAnual
                   ? `Equivale a $${(PRECIO_PRO_ANUAL / 12).toFixed(2)}/mes`
@@ -574,7 +621,7 @@ export default function Plans() {
                   badgeActual
                 ) : (
                   <s-button variant="primary" onClick={() => elegirPlan(planPro)}>
-                    Elegir Pro
+                    Iniciar prueba gratuita
                   </s-button>
                 )
               }

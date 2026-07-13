@@ -6,6 +6,8 @@ import { authenticate } from "../shopify.server";
 import { PLANES_PRO, cuotaCFDI } from "../plans";
 import { BILLING_TEST } from "../billing.server";
 import prisma from "../db.server";
+import { Progreso } from "../components/Progreso";
+import { Kpi } from "../components/Kpi";
 
 // Paginamos los Draft Orders (hasta MAX_PAGES × 100) para que los KPIs sean
 // fieles aunque el comerciante tenga mucho volumen, y dejamos que el cliente
@@ -188,27 +190,9 @@ function DeltaChip({ delta }: { delta: number | null | undefined }) {
   );
 }
 
-// Barra de progreso simple para gráficas (Polaris no trae charts; estilos
-// inline mínimos solo para la visualización de datos).
-const TRACK: React.CSSProperties = {
-  height: 8,
-  background: "#e6e6e8",
-  borderRadius: 999,
-  overflow: "hidden",
-};
+// Barra de las gráficas (Polaris no trae charts). Reusa el medidor compartido.
 function Barra({ pct, color }: { pct: number; color?: string }) {
-  return (
-    <div style={TRACK}>
-      <div
-        style={{
-          width: `${Math.max(0, Math.min(100, pct))}%`,
-          height: "100%",
-          borderRadius: 999,
-          background: color ?? "#2c6ecb",
-        }}
-      />
-    </div>
-  );
+  return <Progreso pct={pct} color={color} />;
 }
 
 // Métricas núcleo de un conjunto de cotizaciones (para comparar periodos).
@@ -628,50 +612,40 @@ export default function Analitica() {
           </s-stack>
 
           <s-grid
-            gridTemplateColumns="repeat(auto-fit, minmax(180px, 1fr))"
+            gridTemplateColumns="repeat(auto-fit, minmax(190px, 1fr))"
             gap="base"
           >
-            <s-stack gap="small-300">
-              <s-text color="subdued">Ingresos cobrados</s-text>
-              <s-heading>{fmtMoney.format(ingresosAnim)}</s-heading>
-              <s-stack direction="inline">
-                <DeltaChip delta={m.deltas?.ingresos} />
-              </s-stack>
-            </s-stack>
-            <s-stack gap="small-300">
-              <s-text color="subdued">Valor en pipeline</s-text>
-              <s-heading>{fmtMoney.format(pipelineAnim)}</s-heading>
-              <s-stack direction="inline">
-                <DeltaChip delta={m.deltas?.pipeline} />
-              </s-stack>
-            </s-stack>
-            <s-stack gap="small-300">
-              <s-text color="subdued">Tasa de conversión</s-text>
-              <s-heading>{`${conversionAnim.toFixed(1)}%`}</s-heading>
-              <s-stack direction="inline">
-                <DeltaChip delta={m.deltas?.conversion} />
-              </s-stack>
-            </s-stack>
-            <s-stack gap="small-300">
-              <s-text color="subdued">Cotizaciones</s-text>
-              <s-heading>{`${Math.round(totalAnim)}`}</s-heading>
-              <s-stack direction="inline">
-                <DeltaChip delta={m.deltas?.total} />
-              </s-stack>
-            </s-stack>
-            <s-stack gap="small-300">
-              <s-text color="subdued">Ticket promedio</s-text>
-              <s-heading>{fmtMoney.format(ticketAnim)}</s-heading>
-              <s-stack direction="inline">
-                <DeltaChip delta={m.deltas?.ticket} />
-              </s-stack>
-            </s-stack>
-            <s-stack gap="small-300">
-              <s-text color="subdued">Tiempo de cierre</s-text>
-              <s-heading>
-                {m.tiempoCierre != null ? `${m.tiempoCierre.toFixed(1)} d` : "—"}
-              </s-heading>
-            </s-stack>
+            <Kpi
+              label="Ingresos cobrados"
+              value={fmtMoney.format(ingresosAnim)}
+            >
+              <DeltaChip delta={m.deltas?.ingresos} />
+            </Kpi>
+            <Kpi
+              label="Valor en pipeline"
+              value={fmtMoney.format(pipelineAnim)}
+            >
+              <DeltaChip delta={m.deltas?.pipeline} />
+            </Kpi>
+            <Kpi
+              label="Tasa de conversión"
+              value={`${conversionAnim.toFixed(1)}%`}
+            >
+              <DeltaChip delta={m.deltas?.conversion} />
+            </Kpi>
+            <Kpi label="Cotizaciones" value={`${Math.round(totalAnim)}`}>
+              <DeltaChip delta={m.deltas?.total} />
+            </Kpi>
+            <Kpi label="Ticket promedio" value={fmtMoney.format(ticketAnim)}>
+              <DeltaChip delta={m.deltas?.ticket} />
+            </Kpi>
+            <Kpi
+              label="Tiempo de cierre"
+              value={
+                m.tiempoCierre != null ? `${m.tiempoCierre.toFixed(1)} d` : "—"
+              }
+              pie="de creada a pagada"
+            />
           </s-grid>
         </s-stack>
       </s-section>

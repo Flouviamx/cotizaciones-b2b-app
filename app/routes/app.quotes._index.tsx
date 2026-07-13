@@ -9,6 +9,7 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { evaluarLimite } from "../limites.server";
+import { Kpi } from "../components/Kpi";
 
 // Formatea un monto en la moneda BASE de la tienda (shopMoney) con separadores
 // de miles y el símbolo correcto. Shopify ya convirtió a la moneda del comerciante.
@@ -186,6 +187,11 @@ export default function Index() {
 
   return (
     <s-page heading="Cotizaciones">
+      {!limite.paid ? (
+        <s-badge slot="accessory" tone={limite.bloqueado ? "critical" : "info"}>
+          {`${limite.activas} / ${limite.limite} activas`}
+        </s-badge>
+      ) : null}
       <s-button
         slot="primary-action"
         variant="primary"
@@ -201,12 +207,16 @@ export default function Index() {
           heading={`Llegaste al límite del Plan Gratis (${limite.limite} cotizaciones activas)`}
         >
           <s-paragraph>
-            Marca cotizaciones como pagadas para liberar espacio, o{" "}
-            <s-link onClick={() => navigate("/app/plans")}>
-              mejora tu plan
-            </s-link>{" "}
-            para cotizaciones ilimitadas.
+            Marca cotizaciones como pagadas para liberar espacio, o mejora tu
+            plan para tener cotizaciones ilimitadas.
           </s-paragraph>
+          <s-button
+            slot="primary-action"
+            variant="primary"
+            onClick={() => navigate("/app/plans")}
+          >
+            Ver planes
+          </s-button>
         </s-banner>
       ) : null}
 
@@ -225,35 +235,18 @@ export default function Index() {
       {/* Resumen */}
       <s-section accessibilityLabel="Resumen de cotizaciones">
         <s-grid
-          gridTemplateColumns="repeat(auto-fit, minmax(150px, 1fr))"
+          gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))"
           gap="base"
         >
-          <s-stack gap="small-300">
-            <s-text color="subdued">Abiertas</s-text>
-            <s-heading>{`${abiertas}`}</s-heading>
-          </s-stack>
-          <s-stack gap="small-300">
-            <s-text color="subdued">Enviadas</s-text>
-            <s-heading>{`${enviadas}`}</s-heading>
-          </s-stack>
-          <s-stack gap="small-300">
-            <s-text color="subdued">Pagadas</s-text>
-            <s-heading>{`${pagadas}`}</s-heading>
-          </s-stack>
-          <s-stack gap="small-300">
-            <s-text color="subdued">Pendiente de cobro</s-text>
-            <s-heading>{formatoMoneda(valorPendiente, moneda)}</s-heading>
-          </s-stack>
+          <Kpi label="Abiertas" value={`${abiertas}`} pie="por atender" />
+          <Kpi label="Enviadas" value={`${enviadas}`} pie="esperando pago" />
+          <Kpi label="Pagadas" value={`${pagadas}`} pie="ya son pedidos" />
+          <Kpi
+            label="Pendiente de cobro"
+            value={formatoMoneda(valorPendiente, moneda)}
+            pie="en cotizaciones activas"
+          />
         </s-grid>
-        {!limite.paid && !limite.bloqueado ? (
-          <s-box paddingBlockStart="base">
-            <s-text color="subdued">
-              Plan Gratis · {limite.activas} de {limite.limite} cotizaciones
-              activas ·{" "}
-            </s-text>
-            <s-link onClick={() => navigate("/app/plans")}>Mejorar plan</s-link>
-          </s-box>
-        ) : null}
       </s-section>
 
       {/* Lista con filtros */}
@@ -283,18 +276,34 @@ export default function Index() {
         </s-box>
 
         {quotes.length === 0 ? (
-          <s-box padding="large">
-            <s-stack gap="small-200" alignItems="center">
+          <s-box padding="large-300">
+            <s-stack gap="base" alignItems="center">
+              <s-heading>Aún no tienes cotizaciones</s-heading>
               <s-paragraph color="subdued">
-                Aún no tienes cotizaciones. Crea una con "Nueva cotización".
+                Crea una cotización manual para tu cliente, o activa el botón en
+                tu tienda para que ellos mismos la soliciten.
               </s-paragraph>
+              <s-stack direction="inline" gap="small-200">
+                <s-button
+                  variant="primary"
+                  onClick={() => navigate("/app/quotes/new")}
+                >
+                  Crear cotización
+                </s-button>
+                <s-button onClick={() => navigate("/app")}>
+                  Ver primeros pasos
+                </s-button>
+              </s-stack>
             </s-stack>
           </s-box>
         ) : filtradas.length === 0 ? (
-          <s-box padding="large">
-            <s-paragraph color="subdued">
-              No hay cotizaciones que coincidan con el filtro o la búsqueda.
-            </s-paragraph>
+          <s-box padding="large-300">
+            <s-stack gap="small-200" alignItems="center">
+              <s-heading>Sin resultados</s-heading>
+              <s-paragraph color="subdued">
+                Ninguna cotización coincide con el filtro o la búsqueda.
+              </s-paragraph>
+            </s-stack>
           </s-box>
         ) : (
           <s-table>
