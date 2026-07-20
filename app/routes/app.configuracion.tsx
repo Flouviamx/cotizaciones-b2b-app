@@ -38,6 +38,7 @@ import {
   type OrgEstado,
 } from "../facturapi.server";
 import { NavVertical } from "../components/NavVertical";
+import { Tabs } from "../components/Tabs";
 
 // La configuración se guarda como UN metafield JSON propio de la app
 // (namespace reservado "$app:flouvia"). Los metafields de la app no requieren
@@ -146,6 +147,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Estado del emisor CFDI (organización Facturapi de esta tienda).
   const emisor = await estadoEmisor(session.shop);
 
+  // Deep link al editor de temas con el panel de bloques de app ya abierto
+  // (?context=apps) — usado en la pestaña "Botón en tienda" para "Modo solo
+  // cotización" (esa función vive en el bloque Liquid, no en este metafield).
+  const themeEditorUrl = `https://${session.shop}/admin/themes/current/editor?context=apps`;
+
   return {
     config: mergeConfig(guardado),
     shopName: shop.name ?? "",
@@ -153,6 +159,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     hasPro,
     hasPaid,
     emisor,
+    themeEditorUrl,
   };
 };
 
@@ -308,14 +315,22 @@ function rfcEstado(rfc: string): "vacio" | "ok" | "mal" {
 }
 
 export default function Configuracion() {
-  const { config: inicial, shopEmail, shopName, hasPaid, hasPro, emisor } =
-    useLoaderData<typeof loader>();
+  const {
+    config: inicial,
+    shopEmail,
+    shopName,
+    hasPaid,
+    hasPro,
+    emisor,
+    themeEditorUrl,
+  } = useLoaderData<typeof loader>();
   const shopify = useAppBridge();
   const fetcher = useFetcher<typeof action>();
   const cfdiFetcher = useFetcher<typeof action>();
   const [mostrarCsd, setMostrarCsd] = useState(false);
 
   const [tab, setTab] = useState<TabId>("fiscal");
+  const [botonTab, setBotonTab] = useState<"texto" | "solo-cotizacion">("texto");
   const [mailSel, setMailSel] = useState<EmailKey>("clienteRecibido");
   // Los campos son web components de Polaris: el elemento host expone value/
   // focus, pero puede no soportar selección de texto (hay fallback al final).
@@ -991,63 +1006,119 @@ export default function Configuracion() {
 
       {/* ---------- BOTON ---------- */}
       {tab === "boton" ? (
-        <s-section heading='Botón "Solicitar cotización"'>
-          <s-stack gap="base">
-            <s-paragraph color="subdued">
-              Personaliza cómo se ve el botón que tus clientes ven en la página
-              de producto de tu tienda.
-            </s-paragraph>
-            <s-text-field
-              label="Texto del botón"
-              placeholder="Solicitar cotización"
-              details={`${config.boton.texto.length}/40 caracteres.`}
-              value={config.boton.texto}
-              onChange={(e: any) =>
-                set("boton", { texto: e.currentTarget.value.slice(0, 40) })
-              }
+        <s-stack gap="base">
+          <s-box paddingBlockEnd="small-200">
+            <Tabs
+              tabs={[
+                { id: "texto", label: "Botón de cotización" },
+                { id: "solo-cotizacion", label: "Modo solo cotización" },
+              ]}
+              value={botonTab}
+              onChange={(id) => setBotonTab(id as typeof botonTab)}
             />
-            <s-switch
-              label="Mostrar precio de lista"
-              details="Muestra el precio normal debajo del botón. Desactívalo si tus precios B2B son sólo bajo cotización."
-              checked={config.boton.mostrarPrecio}
-              onChange={() =>
-                set("boton", { mostrarPrecio: !config.boton.mostrarPrecio })
-              }
-            />
+          </s-box>
 
-            {/* Vista previa del botón del STOREFRONT (con la marca del widget,
-                no del admin: por eso lleva su propio estilo inline). */}
-            <s-box padding="base" background="subdued" borderRadius="base">
-              <s-stack gap="small-200" alignItems="center">
-                <s-text color="subdued">Vista previa</s-text>
-                <button
-                  type="button"
-                  style={{
-                    display: "inline-flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 3,
-                    background: "linear-gradient(135deg, #1a73e8, #4285f4)",
-                    color: "#fff",
-                    border: 0,
-                    borderRadius: 12,
-                    padding: "13px 26px",
-                    fontSize: 15,
-                    fontWeight: 700,
-                    cursor: "default",
-                  }}
-                >
-                  {config.boton.texto || "Solicitar cotización"}
-                  {config.boton.mostrarPrecio ? (
-                    <span style={{ fontSize: 12, fontWeight: 600, opacity: 0.85 }}>
-                      Precio de lista: $1,250.00 MXN
-                    </span>
-                  ) : null}
-                </button>
+          {botonTab === "texto" ? (
+            <s-grid
+              gridTemplateColumns="minmax(0, 1fr) minmax(280px, 0.8fr)"
+              gap="base"
+            >
+              {/* Lógica */}
+              <s-section heading="Lógica">
+                <s-stack gap="base">
+                  <s-paragraph color="subdued">
+                    Personaliza cómo se ve el botón que tus clientes ven en la
+                    página de producto de tu tienda.
+                  </s-paragraph>
+                  <s-text-field
+                    label="Texto del botón"
+                    placeholder="Solicitar cotización"
+                    details={`${config.boton.texto.length}/40 caracteres.`}
+                    value={config.boton.texto}
+                    onChange={(e: any) =>
+                      set("boton", { texto: e.currentTarget.value.slice(0, 40) })
+                    }
+                  />
+                  <s-divider />
+                  <s-switch
+                    label="Mostrar precio de lista"
+                    details="Muestra el precio normal debajo del botón. Desactívalo si tus precios B2B son sólo bajo cotización."
+                    checked={config.boton.mostrarPrecio}
+                    onChange={() =>
+                      set("boton", { mostrarPrecio: !config.boton.mostrarPrecio })
+                    }
+                  />
+                </s-stack>
+              </s-section>
+
+              {/* Vista previa (sticky) del botón del STOREFRONT — con la
+                  marca del widget, no del admin: por eso lleva su propio
+                  estilo inline. */}
+              <div style={{ position: "sticky", top: 16, alignSelf: "start" }}>
+                <s-section heading="Vista previa">
+                  <s-box padding="large-100" background="subdued" borderRadius="base">
+                    <s-stack gap="small-200" alignItems="center">
+                      <button
+                        type="button"
+                        style={{
+                          display: "inline-flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 3,
+                          background: "linear-gradient(135deg, #1a73e8, #4285f4)",
+                          color: "#fff",
+                          border: 0,
+                          borderRadius: 12,
+                          padding: "13px 26px",
+                          fontSize: 15,
+                          fontWeight: 700,
+                          cursor: "default",
+                        }}
+                      >
+                        {config.boton.texto || "Solicitar cotización"}
+                        {config.boton.mostrarPrecio ? (
+                          <span style={{ fontSize: 12, fontWeight: 600, opacity: 0.85 }}>
+                            Precio de lista: $1,250.00 MXN
+                          </span>
+                        ) : null}
+                      </button>
+                    </s-stack>
+                  </s-box>
+                </s-section>
+              </div>
+            </s-grid>
+          ) : (
+            <s-section heading="Modo solo cotización">
+              <s-stack gap="base">
+                <s-paragraph color="subdued">
+                  Oculta el precio y el botón "Añadir al carrito" de la página
+                  de producto para que el cliente solo pueda solicitar
+                  cotización. Disponible en todos los planes.
+                </s-paragraph>
+                <s-unordered-list>
+                  <s-list-item>Ocultar el precio del producto</s-list-item>
+                  <s-list-item>
+                    Ocultar "Añadir al carrito" y pago rápido
+                  </s-list-item>
+                </s-unordered-list>
+                <s-banner tone="info">
+                  <s-paragraph>
+                    Esta parte vive en el bloque de tema "Solicitar
+                    cotización" (no en este metafield) porque necesita
+                    aplicarse al cargar la página, antes de que el JS del
+                    admin pueda intervenir — así no hay parpadeo del precio.
+                    Actívala desde el editor de temas.
+                  </s-paragraph>
+                </s-banner>
+                <s-stack direction="inline">
+                  <s-button href={themeEditorUrl} target="_blank" icon="external">
+                    Abrir editor de temas
+                  </s-button>
+                </s-stack>
               </s-stack>
-            </s-box>
-          </s-stack>
-        </s-section>
+            </s-section>
+          )}
+        </s-stack>
       ) : null}
 
       {/* ---------- PDF ---------- */}
