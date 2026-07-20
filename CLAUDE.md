@@ -50,20 +50,22 @@ Reglas de la migración:
   botones "Guardar" propios, donde aplique.
 - Sin testimonios falsos (Shopify los prohíbe).
 
-**Estado de conversión por ruta** — TODAS convertidas (jul 2026):
-- [x] `app._index.tsx` (Inicio) — patrón de referencia
+**Estado de conversión por ruta** — TODAS convertidas (jul 2026), probadas en vivo en el
+admin real por Andre en las que se tocaron después (ver sección "Nivel App Store" abajo):
+- [x] `app._index.tsx` (Inicio) — patrón de referencia + pulido "Nivel App Store" (ver abajo)
 - [x] `app.quotes._index.tsx` (lista) — `s-table`, `s-banner`, stats con `s-grid`
 - [x] `app.quotes.new.tsx`
 - [x] `app.quotes.$id.tsx` (detalle)
 - [x] `app.plans.tsx` — cards con `s-box border` en `s-grid`; submits con `useSubmit` (NO `<Form>`)
-- [x] `app.configuracion.tsx` — pestañas como `s-button` toggle + **`ui-save-bar` de App Bridge**
-  (`shopify.saveBar.show/hide("config-save-bar")` en un `useEffect` sobre `dirty`); los
-  file inputs del CSD siguen nativos dentro de `cfdiFetcher.Form`; el submit es
-  `<s-button type="submit">` (form-associated).
+- [x] `app.configuracion.tsx` — nav vertical (NO pestañas horizontales, ver "Nivel App Store") +
+  **`ui-save-bar` de App Bridge** (`shopify.saveBar.show/hide("config-save-bar")` en un
+  `useEffect` sobre `dirty`); los file inputs del CSD siguen nativos dentro de
+  `cfdiFetcher.Form`; el submit es `<s-button type="submit">` (form-associated).
 - [x] `app.formulario.tsx` — mismo patrón save bar (`formulario-save-bar`); helper `CampoColor`
-  (s-text-field + `<input type=color>` nativo).
-- [x] `app.analitica.tsx` — insights como `s-banner`, KPIs en `s-grid`, gráficas de barras con
-  estilos INLINE (permitido: es visualización de datos, Polaris no trae charts).
+  (s-text-field + `<input type=color>` nativo); rail de íconos + preview con toggle
+  desktop/mobile (ver "Nivel App Store").
+- [x] `app.analitica.tsx` — insights como `s-banner`, KPIs en `s-grid`, gráficas OFICIALES de
+  Shopify con `@shopify/polaris-viz` (ya NO son SVG/barras hechas a mano — ver "Nivel App Store").
 - [x] `app.empresas.tsx` — el drawer lateral se volvió sección de detalle condicional; tarjetas
   `s-clickable` + `s-box`; barra de crédito con helper `BarraCredito` (inline styles).
 - [x] `app.contacto.tsx`
@@ -72,17 +74,85 @@ Quirks aprendidos en la conversión (NO romper):
 - Los eventos de campos Polaris: `onChange`/`onInput` con `e.currentTarget.value` (tipar `(e: any)`).
 - `insertarVar` en Configuración usa refs a los hosts de los web components: `selectionStart`
   no existe → cae al fallback (inserta al final). Aceptable.
-- El botón "Anual/Mensual", tabs y filtros se hacen con `s-button` variant primary/secondary
-  (no hay componente de tabs en Polaris WC todavía).
+- El botón "Anual/Mensual" y filtros se hacen con `s-button` variant primary/secondary
+  (no hay componente de segmented-control en Polaris WC todavía). Para **tabs reales** con
+  subrayado hay un componente propio, `app/components/Tabs.tsx` — úsalo en vez de reinventarlo
+  (se usa en `app.configuracion.tsx` → sub-tabs de "Botón en tienda").
 - Los `<iframe>` de previews (correos/PDF/formulario) se quedan, con estilo inline mínimo.
-- PENDIENTE probar en vivo: Andre debe recorrer las 10 rutas (eventos de campos, save bar,
-  resourcePicker, submits de billing) antes de deploy.
 
 **Requisitos BFS ya cubiertos (no romper):** App Bridge último por CDN (lo inyecta
 `AppProvider` de `@shopify/shopify-app-react-router` junto con `polaris.js`) → habilita la
 medición de Web Vitals de Shopify (targets p75: LCP ≤ 2.5 s, CLS ≤ 0.1, INP ≤ 200 ms);
 embebida con token exchange; webhooks GDPR. Los umbrales de mercado (instalaciones/reseñas)
 no dependen del código.
+
+### Nivel "App Store top" — comparación con Quote Snap (jul 2026)
+
+Andre comparó la app contra **Quote Snap** (competidor de acabado muy pulido) y pidió igualar
+ese nivel en varias pantallas. Componentes nuevos, reutilizables en futuras pantallas:
+
+- **`app/components/Charts.tsx`** — gráficas con `@shopify/polaris-viz`, la librería OFICIAL de
+  gráficas de Shopify (la misma que usa Analytics/Pedidos del admin nativo) → resultado
+  visualmente idéntico, no "inspirado en". Exporta `GraficaLinea`, `GraficaBarras`,
+  `GraficaEmbudo` (usa `FunnelChartNext`) y `TarjetaGrafica` (título + número grande + gráfica,
+  el patrón de las tarjetas de Analytics). Usado en `app.analitica.tsx`: 4 tarjetas de línea
+  (valor cotizado / ingresos cobrados / cotizaciones / conversión, cada una con `DeltaChip`),
+  embudo real, y barras nativas en tops/desgloses B2B (reemplazó las barras `Progreso` a mano).
+  Reemplazó `app/components/LineChart.tsx` (BORRADO — no recrearlo).
+  ⚠️ **CRÍTICO — SSR, no romper:** polaris-viz ejecuta código de navegador (`window`/`document`)
+  al importarse. Un import ESTÁTICO revienta la función serverless en Vercel (500
+  `FUNCTION_INVOCATION_FAILED`) — **pasó en producción** (jul 2026): el build compilaba limpio
+  pero el chart entraba al bundle del servidor y crasheaba en runtime. Fix en `Charts.tsx`: la
+  librería + su CSS se cargan con `import()` DINÁMICO dentro de un `useEffect` (solo cliente,
+  nunca en el primer render de SSR); el componente `Marco` reserva el alto del contenedor
+  mientras carga. Ver error #20 abajo. Verificar siempre tras tocar este archivo: `npm run
+  build` + importar el bundle del servidor con env falsas para confirmar que no truena (comando
+  en el error #20).
+- **`app/components/NavVertical.tsx`** — lista de navegación vertical estilo hub de
+  Configuración del admin nativo (fila activa con fondo gris + check ✓ a la derecha). Reemplazó
+  las pestañas horizontales del nav SUPERIOR de `app.configuracion.tsx`: ahora es un `s-grid`
+  de 2 columnas — nav sticky (220px) a la izquierda + `s-stack` de secciones a la derecha.
+- **`app/components/IconRail.tsx`** — rail vertical angosto de íconos (36×36px, activo con
+  fondo `#1a1a1a` + `filter: invert(1) brightness(2)` en el ícono para que se vea blanco sin
+  depender de un color literal en `s-icon`, que solo acepta `ColorKeyword` = subdued/base/strong).
+  Usado en `app.formulario.tsx` para alternar entre panel "Contenido" (textos) y "Apariencia"
+  (colores/botón) — mismo lenguaje que el "activity bar" de builders tipo Quote Snap.
+- **`app.formulario.tsx`** — además del rail: vista previa con **toggle desktop/mobile**
+  (botones `icon="desktop"`/`icon="mobile"`, cambia el `width` del iframe entre `100%` y `375px`
+  con transición CSS).
+- **`app.configuracion.tsx` → pestaña "Botón en tienda"** — sub-tabs horizontales (reutiliza
+  `Tabs.tsx`, que había quedado sin uso al migrar el nav superior a vertical): "Botón de
+  cotización" (texto + mostrar precio, con Vista previa **sticky**) y "Modo solo cotización"
+  (informativa, nueva). **Decisión deliberada — no fingir funcionalidad:** esa segunda sub-tab
+  NO tiene toggles reales en el admin. "Ocultar precio/carrito" vive en el bloque Liquid del
+  tema (`extensions/solicitar-cotizacion/blocks/solicitar_cotizacion.liquid`, checkboxes
+  `hide_price`/`hide_cart_button`) porque necesita aplicarse server-side, antes del primer
+  paint, para no parpadear. Conectarlo al metafield `$app:flouvia`/`config` requeriría
+  exponerlo a Liquid con acceso storefront (metafield definition + `access.storefront`) — es
+  un cambio de arquitectura real, no cosmético, y quedó fuera de esta pasada. La sub-tab solo
+  explica la función y enlaza al editor de temas (`themeEditorUrl`, mismo deep link
+  `?context=apps` que ya usaba `app._index.tsx`; ahora también lo calcula el loader de
+  `app.configuracion.tsx`).
+- **`app._index.tsx` (Inicio)** — nueva sección de sidebar "Estado en tu tienda" (dot verde/
+  ámbar según `botonListo`, arriba de "Estado de tu cuenta"); el botón de plan se movió al
+  header de la tarjeta "Estado de tu cuenta" (`slot="primary-action"`) en vez de un botón al
+  final de la tarjeta; "Centro de soporte" pasó de `s-button variant="tertiary"` (se veía
+  pesado, con chrome de botón) a filas compactas de ícono + link (helper local `FilaAccion`:
+  `s-icon tone="neutral" size="small"` + `s-link`, sin fondo ni borde) — mismo patrón denso que
+  "💬 Iniciar chat / 📖 Guía / ✉️ Correo" de la referencia.
+
+**Pendiente / diferido a propósito (decisión explícita de Andre, jul 2026) — NO son bugs, son
+scope cortado a propósito:**
+- El **árbol de campos editable** del form builder de Quote Snap (agregar/reordenar campos por
+  paso, tipo árbol de "Elementos del formulario") NO se construyó. Implica rearquitecturar
+  `formulario-config.ts` a un modelo de pasos/campos dinámicos Y reescribir el modal Liquid/JS
+  del storefront (`extensions/solicitar-cotizacion/assets/flouvia.js` + el bloque) para
+  renderizarlo. Es un proyecto grande (nuevo modelo de datos + nuevo storefront widget + mucho
+  testing), no un cambio de chrome visual.
+- El toggle "ocultar precio/carrito" en el admin (ver punto de `app.configuracion.tsx` arriba)
+  — requiere exponer el metafield a Liquid con acceso storefront.
+- Ambos quedan como features futuras explícitas la próxima vez que se retome este trabajo —
+  no builds a medias ni UI que finge hacer algo que no hace.
 
 ## Moneda (IMPORTANTE)
 
@@ -247,6 +317,15 @@ Orden en `app.tsx`: **Inicio** → **Cotizaciones** → **Empresas** → **Anal�
 - `app/routes/app.contacto.tsx` — formulario de contacto + soporte directo
 - `app/routes/create.tsx` — App Proxy POST: crea draft order desde la tienda. Aplica tope Gratis, aviso al vendedor en todos los planes. **El widget NO recolecta nombre/email/teléfono** — esos campos son iguales a los del checkout de Shopify (regla 1.1.2, suspensión App Review jun 2026). Solo acepta campos B2B-exclusivos: empresa, RFC, términos, notas. Si el cliente está logueado, usa `logged_in_customer_id` del App Proxy para enlazar el draft order a su cuenta. Ver [[app-review-rechazo-1-1-2]].
 - `app/routes/config.tsx` — App Proxy GET: devuelve `{ pro, paid, config: { boton, credito } }` para el modal del storefront.
+- `app/components/Charts.tsx` — gráficas oficiales de Shopify (`@shopify/polaris-viz`, carga
+  lazy client-only — ver "Nivel App Store" y error #20). Exporta `GraficaLinea`, `GraficaBarras`,
+  `GraficaEmbudo`, `TarjetaGrafica`. Usado en `app.analitica.tsx`.
+- `app/components/NavVertical.tsx` — nav vertical estilo hub de Configuración (fila activa +
+  check). Usado en `app.configuracion.tsx` (nav superior de 6 secciones).
+- `app/components/IconRail.tsx` — rail angosto de íconos para alternar paneles de un builder.
+  Usado en `app.formulario.tsx` (Contenido / Apariencia).
+- `app/components/Tabs.tsx` — tabs horizontales con subrayado (estilo nativo admin). Usado en
+  `app.configuracion.tsx` → sub-tabs de la pestaña "Botón en tienda".
 - `app/pdf-cotizacion.ts` — **ARCHIVO CLIENTE-SEGURO** compartido. Genera el HTML imprimible del PDF. Exporta: `PdfMarca` (tipo), `DEFAULT_PDF`, `mergePdfMarca`, `construirHTMLcotizacion`. Usado por `app.quotes.$id.tsx` (generar PDF real) y `app.configuracion.tsx` (preview en vivo). La función `lighten()` calcula el gradiente a partir del color hex del comerciante. NO importar nada de servidor aquí.
 - `app/facturapi.server.ts` — timbrado CFDI 4.0 **MULTI-TENANT** (SDK `facturapi`). Cada comerciante es un emisor distinto: tiene su propia **organización** en Facturapi con su propio CSD/RFC. Dos niveles de llave: `FACTURAPI_USER_KEY` (nuestra cuenta, administra orgs) y la llave de cada org (se guarda en `FacturapiOrg`, la live cifrada). Funciones: `estadoEmisor(shop)`, `conectarEmisor(shop, {legalName,taxSystem,zip,cer,key,password})` (crea org → updateLegal → uploadCertificate → guarda llaves), `setLivemode(shop,bool)`, `timbrarCFDI(shop, {receiver, items})` (usa la llave de la org de ESA tienda). `tax_included: false` (precio sin IVA, se agrega 16% encima) — validar contra los precios reales de la tienda. **NO probado en vivo.**
 - `app/crypto.server.ts` — cifrado AES-256-GCM para secretos en reposo (la llave live de cada emisor). Clave maestra en `FACTURAPI_ENC_KEY` (.env). `encryptSecret`/`decryptSecret`.
@@ -282,6 +361,20 @@ Orden en `app.tsx`: **Inicio** → **Cotizaciones** → **Empresas** → **Anal�
 17. **Botón en tarjetas "no aparece" en Dawn** → Dawn tiene DOS `.card__content` por tarjeta y el primero (dentro de `.card__inner`) está oculto por CSS (`.card--standard.card--media .card__inner .card__information { display:none }`). `querySelector` tomaba el primero → el botón se inyectaba invisible. Fix (jul 2026): `visibleInfoHost()` en `flouvia.js` elige el ÚLTIMO contenedor visible (`offsetParent !== null`).
 18. **Los candados de plan van también en el ACTION, no solo en la UI** → `generarCFDI`, `cfdiConnect` y `cfdiLivemode` no verificaban el plan en el servidor (se podían saltar con un POST). Fix (jul 2026): `billing.check` con `PLANES_PRO` en `app.quotes.$id.tsx` y helper `esPro()` (vía `activeSubscriptions`) en `app.configuracion.tsx`. Revisar este patrón en cada intent nuevo de pago.
 19. **El token offline de la app EXPIRA** (token exchange renovable): la fila `Session` en Supabase trae `expires` y solo se refresca cuando alguien abre la app en el admin. Los scripts de mantenimiento (`scripts/borrar-cotizaciones.mjs`) fallan con "Invalid API key or access token" si la app no se ha abierto recientemente → abrir la app y reintentar.
+20. **`@shopify/polaris-viz` con import ESTÁTICO tumba la función serverless en Vercel** (500
+    `FUNCTION_INVOCATION_FAILED`, "This Serverless Function has crashed") → la librería ejecuta
+    código de navegador (`window`/`document`) al importarse; el build compila limpio pero
+    crashea en runtime porque el módulo queda dentro del bundle SSR. Pasó en producción
+    (jul 2026) al agregar los charts de Analítica. **Fix:** cargar la librería + su CSS con
+    `import()` dinámico DENTRO de un `useEffect` (solo cliente) — ver el patrón `Marco`/`useViz`
+    en `app/components/Charts.tsx`. **Verificación antes de cada deploy que toque ese archivo**
+    (no basta con `npm run typecheck`/`npm run build` — ambos pasan igual aunque esté roto):
+    ```bash
+    npm run build
+    SHOPIFY_APP_URL="https://x.test" SHOPIFY_API_KEY="x" SHOPIFY_API_SECRET="x" SCOPES="read_products" \
+      node -e "import('./build/server/nodejs_eyJydW50aW1lIjoibm9kZWpzIn0/index.js').then(()=>console.log('SSR_OK')).catch(e=>console.log('SSR_FAIL:',e.message))"
+    ```
+    Si dice `SSR_FAIL`, algo del módulo problemático se coló en un import estático top-level.
 
 ## Convenciones de trabajo con Andre
 
