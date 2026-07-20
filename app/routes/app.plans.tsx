@@ -396,21 +396,128 @@ function Feature({ f }: { f: string }) {
   );
 }
 
-// Precio grande: única licencia tipográfica de la página (los precios son el
-// dato que el comerciante compara de un vistazo). Hereda tipografía/color del
-// admin, solo cambia el tamaño.
-function PrecioGrande({ texto, size = "1.9rem" }: { texto: string; size?: string }) {
+// Precio con tachado + badge de descuento (patrón de las páginas de precios
+// del App Store: precio grande, precio anterior tachado al lado, ahorro
+// destacado). Única licencia tipográfica de la página — hereda tipografía y
+// color del admin, solo cambia el tamaño del número.
+function Precio({
+  monto,
+  sufijo = "/mes",
+  tachado,
+  ahorroPct,
+  size = "1.9rem",
+}: {
+  monto: number;
+  sufijo?: string;
+  tachado?: number;
+  ahorroPct?: number;
+  size?: string;
+}) {
+  const texto = Number.isInteger(monto) ? `$${monto}` : `$${monto.toFixed(2)}`;
   return (
-    <span
+    <s-stack gap="small-300">
+      <s-stack direction="inline" gap="small-300" alignItems="baseline">
+        <span
+          style={{
+            fontSize: size,
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {texto}
+        </span>
+        <s-text color="subdued">{sufijo}</s-text>
+      </s-stack>
+      {tachado != null ? (
+        <s-stack direction="inline" gap="small-300" alignItems="center">
+          <span
+            style={{
+              fontSize: "0.85rem",
+              color: "#8a8a8a",
+              textDecoration: "line-through",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {`$${tachado}`}
+          </span>
+          {ahorroPct != null ? (
+            <s-badge tone="warning">{`${ahorroPct}% de descuento`}</s-badge>
+          ) : null}
+        </s-stack>
+      ) : null}
+    </s-stack>
+  );
+}
+
+// Toggle de intervalo: píldora con el seleccionado resaltado, como en las
+// páginas de precios del App Store (no dos botones sueltos).
+function IntervaloToggle({
+  value,
+  onChange,
+  ahorroPct,
+}: {
+  value: "mensual" | "anual";
+  onChange: (v: "mensual" | "anual") => void;
+  ahorroPct: number;
+}) {
+  const base: React.CSSProperties = {
+    border: 0,
+    borderRadius: 999,
+    padding: "8px 18px",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+  };
+  const activo: React.CSSProperties = {
+    background: "#fff",
+    color: "#1a1a1a",
+    boxShadow: "0 1px 3px rgba(0,0,0,.15)",
+  };
+  const inactivo: React.CSSProperties = {
+    background: "transparent",
+    color: "#616161",
+  };
+  return (
+    <div
       style={{
-        fontSize: size,
-        fontWeight: 700,
-        letterSpacing: "-0.02em",
-        fontVariantNumeric: "tabular-nums",
+        display: "inline-flex",
+        gap: 2,
+        background: "#f1f1f1",
+        borderRadius: 999,
+        padding: 3,
       }}
     >
-      {texto}
-    </span>
+      <button
+        type="button"
+        style={{ ...base, ...(value === "mensual" ? activo : inactivo) }}
+        onClick={() => onChange("mensual")}
+      >
+        Mensual
+      </button>
+      <button
+        type="button"
+        style={{ ...base, ...(value === "anual" ? activo : inactivo) }}
+        onClick={() => onChange("anual")}
+      >
+        Anual
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: value === "anual" ? "#8a5a00" : "#8a8a8a",
+            background: value === "anual" ? "#fff2c7" : "transparent",
+            borderRadius: 999,
+            padding: value === "anual" ? "2px 8px" : 0,
+          }}
+        >
+          {`Ahorra ${ahorroPct}%`}
+        </span>
+      </button>
+    </div>
   );
 }
 
@@ -418,9 +525,10 @@ function PrecioGrande({ texto, size = "1.9rem" }: { texto: string; size?: string
 function CardPlan(props: {
   nombre: string;
   tagline: string;
-  precioTexto: string;
-  periodo: string;
-  equivalencia?: string;
+  montoMensual: number;
+  montoTachado?: number;
+  ahorroPct?: number;
+  facturado?: string;
   badge?: string;
   cta: React.ReactNode;
   features: string[];
@@ -437,15 +545,14 @@ function CardPlan(props: {
         </s-stack>
 
         <s-stack gap="small-300">
-          <s-stack direction="inline" gap="small-300" alignItems="baseline">
-            <PrecioGrande texto={props.precioTexto} />
-            <s-text color="subdued">{props.periodo}</s-text>
-          </s-stack>
-          {props.equivalencia ? (
-            <s-text tone="success">{props.equivalencia}</s-text>
-          ) : (
-            <s-text color="subdued">&nbsp;</s-text>
-          )}
+          <Precio
+            monto={props.montoMensual}
+            tachado={props.montoTachado}
+            ahorroPct={props.ahorroPct}
+          />
+          <s-text color="subdued">
+            {props.facturado ?? " "}
+          </s-text>
         </s-stack>
 
         {props.cta}
@@ -467,9 +574,10 @@ function CardPlan(props: {
 function CardPlanHero(props: {
   nombre: string;
   tagline: string;
-  precioTexto: string;
-  periodo: string;
-  equivalencia?: string;
+  montoMensual: number;
+  montoTachado?: number;
+  ahorroPct?: number;
+  facturado?: string;
   cta: React.ReactNode;
   features: string[];
 }) {
@@ -491,15 +599,15 @@ function CardPlanHero(props: {
           </s-stack>
           <s-text color="subdued">{props.tagline}</s-text>
           <s-stack gap="small-300">
-            <s-stack direction="inline" gap="small-300" alignItems="baseline">
-              <PrecioGrande texto={props.precioTexto} size="2.6rem" />
-              <s-text color="subdued">{props.periodo}</s-text>
-            </s-stack>
-            {props.equivalencia ? (
-              <s-text tone="success">{props.equivalencia}</s-text>
-            ) : (
-              <s-text color="subdued">Prueba gratis de 7 días</s-text>
-            )}
+            <Precio
+              monto={props.montoMensual}
+              tachado={props.montoTachado}
+              ahorroPct={props.ahorroPct}
+              size="2.6rem"
+            />
+            <s-text color="subdued">
+              {props.facturado ?? "Prueba gratis de 7 días"}
+            </s-text>
           </s-stack>
           {props.cta}
         </s-stack>
@@ -542,10 +650,33 @@ export default function Plans() {
   const planBasico = esAnual ? PLAN_BASICO_ANUAL : PLAN_BASICO_MENSUAL;
   const planPro = esAnual ? PLAN_PRO_ANUAL : PLAN_PRO_MENSUAL;
   const planPlus = esAnual ? PLAN_PLUS_ANUAL : PLAN_PLUS_MENSUAL;
-  const precioBasico = esAnual ? PRECIO_BASICO_ANUAL : PRECIO_BASICO_MENSUAL;
-  const precioPro = esAnual ? PRECIO_PRO_ANUAL : PRECIO_PRO_MENSUAL;
-  const precioPlus = esAnual ? PRECIO_PLUS_ANUAL : PRECIO_PLUS_MENSUAL;
-  const periodo = esAnual ? "USD / año" : "USD / mes";
+
+  // Con el anual se paga 10 meses por 12 → mismo % de ahorro en los 3 planes
+  // de pago. Se calcula desde las constantes reales (no un número mágico) por
+  // si algún día cambian los precios.
+  const AHORRO_PCT = Math.round(
+    (1 - PRECIO_BASICO_ANUAL / 12 / PRECIO_BASICO_MENSUAL) * 100,
+  );
+  // Ancla de precio ("desde $X al día"): el plan de pago más barato.
+  const precioPorDia = (PRECIO_BASICO_MENSUAL / 30).toFixed(2);
+
+  // Precio grande a mostrar según el intervalo: en anual siempre es el
+  // equivalente mensual (lo que realmente paga cada mes), con el precio
+  // mensual normal tachado al lado — igual que las páginas de precios más
+  // convincentes del App Store.
+  function precioDePlan(mensual: number, anual: number) {
+    return esAnual
+      ? {
+          montoMensual: +(anual / 12).toFixed(2),
+          montoTachado: mensual,
+          ahorroPct: AHORRO_PCT,
+          facturado: `$${anual} facturado anualmente`,
+        }
+      : { montoMensual: mensual, facturado: undefined };
+  }
+  const precioBasico = precioDePlan(PRECIO_BASICO_MENSUAL, PRECIO_BASICO_ANUAL);
+  const precioPro = precioDePlan(PRECIO_PRO_MENSUAL, PRECIO_PRO_ANUAL);
+  const precioPlus = precioDePlan(PRECIO_PLUS_MENSUAL, PRECIO_PLUS_ANUAL);
 
   const elegirPlan = (plan: string) => submit({ plan }, { method: "post" });
   const cancelarPlan = () =>
@@ -578,25 +709,30 @@ export default function Plans() {
         </s-banner>
       ) : null}
 
-      <s-section heading="Elige el plan ideal para tu negocio B2B">
-        <s-stack gap="base">
-          <s-paragraph color="subdued">
-            Prueba gratis de 7 días · cambia o cancela cuando quieras. Con el
-            plan anual ahorras 17% (10 meses por el precio de 12).
-          </s-paragraph>
-          <s-stack direction="inline" gap="small-200">
-            <s-button
-              variant={!esAnual ? "primary" : "secondary"}
-              onClick={() => setIntervalo("mensual")}
+      <s-section accessibilityLabel="Planes de Flouvia">
+        <s-stack gap="large-100">
+          {/* Encabezado grande centrado, como las páginas de precios que más
+              convierten: título de venta + ancla de precio ("desde $X/día"),
+              única licencia tipográfica junto con el precio de cada tarjeta. */}
+          <s-stack gap="base" alignItems="center">
+            <span
+              style={{
+                fontSize: "1.7rem",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+                textAlign: "center",
+              }}
             >
-              Mensual
-            </s-button>
-            <s-button
-              variant={esAnual ? "primary" : "secondary"}
-              onClick={() => setIntervalo("anual")}
-            >
-              Anual · ahorra 17%
-            </s-button>
+              Elige el plan ideal para tu negocio B2B
+            </span>
+            <s-text color="subdued">
+              {`Desde $${precioPorDia} al día · prueba gratis de 7 días · cancela cuando quieras`}
+            </s-text>
+            <IntervaloToggle
+              value={intervalo}
+              onChange={setIntervalo}
+              ahorroPct={AHORRO_PCT}
+            />
           </s-stack>
 
           {/* Pro: el plan recomendado va destacado y a todo lo ancho arriba,
@@ -604,13 +740,7 @@ export default function Plans() {
           <CardPlanHero
             nombre="Pro"
             tagline="Para escalar tu B2B"
-            precioTexto={`$${precioPro}`}
-            periodo={periodo}
-            equivalencia={
-              esAnual
-                ? `Equivale a $${(PRECIO_PRO_ANUAL / 12).toFixed(2)}/mes`
-                : undefined
-            }
+            {...precioPro}
             features={FEATURES_PRO}
             cta={
               activos.includes(planPro) ? (
@@ -632,8 +762,8 @@ export default function Plans() {
             <CardPlan
               nombre="Gratis"
               tagline="Para empezar sin costo"
-              precioTexto="$0"
-              periodo="para siempre"
+              montoMensual={0}
+              facturado="Gratis para siempre"
               features={FEATURES_FREE}
               cta={
                 esFree ? (
@@ -667,13 +797,7 @@ export default function Plans() {
             <CardPlan
               nombre="Básico"
               tagline="Para vender en serio"
-              precioTexto={`$${precioBasico}`}
-              periodo={periodo}
-              equivalencia={
-                esAnual
-                  ? `Equivale a $${(PRECIO_BASICO_ANUAL / 12).toFixed(2)}/mes`
-                  : undefined
-              }
+              {...precioBasico}
               features={FEATURES_BASICO}
               cta={
                 activos.includes(planBasico) ? (
@@ -690,14 +814,8 @@ export default function Plans() {
             <CardPlan
               nombre="Plus"
               tagline="Para alto volumen B2B"
-              precioTexto={`$${precioPlus}`}
-              periodo={periodo}
               badge="Shopify Plus"
-              equivalencia={
-                esAnual
-                  ? `Equivale a $${(PRECIO_PLUS_ANUAL / 12).toFixed(2)}/mes`
-                  : undefined
-              }
+              {...precioPlus}
               features={FEATURES_PLUS}
               cta={
                 activos.includes(planPlus) ? (
