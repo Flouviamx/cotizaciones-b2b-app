@@ -97,6 +97,7 @@ export function construirHTMLcotizacion(opts: {
   moneda: string;
   discountPct: number;
   terminos: string;
+  vigencia?: string;
   rfc: string;
   razonSocial: string;
   marca?: Partial<PdfMarca>;
@@ -248,6 +249,7 @@ export function construirHTMLcotizacion(opts: {
         <h3>Condiciones</h3>
         <p><span>Términos de pago</span>${esc(opts.terminos || "Contado")}</p>
         <p><span>Moneda</span>${esc(opts.moneda)}</p>
+        ${opts.vigencia ? `<p><span>Vigencia</span>${esc(opts.vigencia)}</p>` : ""}
       </div>
       ${fiscalBloque}
     </div>

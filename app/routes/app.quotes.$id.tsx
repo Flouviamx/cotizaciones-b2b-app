@@ -50,6 +50,26 @@ function mensajeCFDI(uso?: {
   return `Factura CFDI generada (${uso.timbrados}/${uso.limite} este mes)`;
 }
 
+// Formatea la fecha ISO ("YYYY-MM-DD") guardada en el customAttribute "Vigencia".
+function formatoFechaVigencia(iso: string) {
+  if (!iso) return "";
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("es-MX", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+// Vencida = ya pasó la fecha Y no se ha pagado. El link de pago sigue vivo
+// (no lo tocamos): esto es solo informativo para el vendedor/comprador.
+function estaVencida(iso: string, status: string) {
+  if (!iso || status === "COMPLETED") return false;
+  const d = new Date(`${iso}T23:59:59`);
+  return !Number.isNaN(d.getTime()) && d.getTime() < Date.now();
+}
+
 function estadoLegible(status: string) {
   switch (status) {
     case "OPEN":
@@ -337,6 +357,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       ? formatoMoneda(money.amount, money.currencyCode)
       : "";
 
+    const vigenciaIso = attr("Vigencia");
+
     const res = await notifyRequesterQuoteSent({
       requesterEmail,
       requesterName,
@@ -344,6 +366,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       shopName: shop?.name,
       invoiceUrl: dq.invoiceUrl,
       total,
+      vigencia: formatoFechaVigencia(vigenciaIso),
       templates,
     });
 
@@ -403,6 +426,29 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     const errs = json.data?.draftOrderUpdate?.userErrors ?? [];
     if (errs.length > 0) return { error: errs.map((e: any) => e.message).join(", ") };
     return { ok: true, termsSaved: true };
+  }
+
+  if (intent === "saveVigencia") {
+    const dias = Number(formData.get("vigenciaDias")) || 15;
+    const vigenciaFecha = new Date();
+    vigenciaFecha.setDate(vigenciaFecha.getDate() + dias);
+    const customAttributes = await mergeCustomAttributes(admin, id, {
+      Vigencia: vigenciaFecha.toISOString().slice(0, 10),
+    });
+    const response = await admin.graphql(
+      `#graphql
+        mutation saveVigencia($id: ID!, $input: DraftOrderInput!) {
+          draftOrderUpdate(id: $id, input: $input) {
+            draftOrder { id }
+            userErrors { field message }
+          }
+        }`,
+      { variables: { id, input: { customAttributes } } },
+    );
+    const json: any = await response.json();
+    const errs = json.data?.draftOrderUpdate?.userErrors ?? [];
+    if (errs.length > 0) return { error: errs.map((e: any) => e.message).join(", ") };
+    return { ok: true, vigenciaSaved: true };
   }
 
   if (intent === "saveFiscal") {
@@ -630,6 +676,10 @@ export default function QuoteDetail() {
     )?.value ?? "Contado";
   const [creditTerms, setCreditTerms] = useState<string>(terminosActuales);
 
+  const vigenciaIso = getAttr("Vigencia");
+  const vencida = estaVencida(vigenciaIso, quote.status);
+  const [vigenciaDias, setVigenciaDias] = useState("15");
+
   const submittingIntent = fetcher.formData?.get("intent");
   const isAssigning =
     fetcher.state !== "idle" && submittingIntent === "assignCustomer";
@@ -639,6 +689,8 @@ export default function QuoteDetail() {
     fetcher.state !== "idle" && submittingIntent === "sendInvoice";
   const isSavingTerms =
     fetcher.state !== "idle" && submittingIntent === "saveTerms";
+  const isSavingVigencia =
+    fetcher.state !== "idle" && submittingIntent === "saveVigencia";
   const isSavingItems =
     fetcher.state !== "idle" && submittingIntent === "saveItems";
   const isSavingFiscal =
@@ -657,9 +709,11 @@ export default function QuoteDetail() {
             ? "Empresa asignada"
             : fetcher.data.termsSaved
               ? "Términos actualizados"
-              : fetcher.data.fiscalSaved
-                ? "Datos fiscales guardados"
-                : fetcher.data.cfdiGenerated
+              : fetcher.data.vigenciaSaved
+                ? "Vigencia actualizada"
+                : fetcher.data.fiscalSaved
+                  ? "Datos fiscales guardados"
+                  : fetcher.data.cfdiGenerated
                   ? mensajeCFDI(fetcher.data.uso)
                   : "Cambios guardados";
       shopify.toast.show(msg);
@@ -739,6 +793,12 @@ export default function QuoteDetail() {
   const guardarTerminos = () =>
     fetcher.submit({ intent: "saveTerms", creditTerms }, { method: "POST" });
 
+  const guardarVigencia = () =>
+    fetcher.submit(
+      { intent: "saveVigencia", vigenciaDias },
+      { method: "POST" },
+    );
+
   const guardarFiscal = () =>
     fetcher.submit(
       { intent: "saveFiscal", rfc, razonSocial, regimen, usoCfdi, cp },
@@ -770,6 +830,7 @@ export default function QuoteDetail() {
       moneda,
       discountPct: Number(discountPct) || 0,
       terminos: creditTerms,
+      vigencia: formatoFechaVigencia(vigenciaIso),
       rfc,
       razonSocial,
       // Solo aplica la marca personalizada si tiene plan de pago. En Gratis
@@ -834,6 +895,7 @@ export default function QuoteDetail() {
             <s-badge tone={estadoTone(quote.status)}>
               {estadoLegible(quote.status)}
             </s-badge>
+            {vencida ? <s-badge tone="critical">Vencida</s-badge> : null}
             <s-text color="subdued">
               {quote.customer?.displayName ?? "Sin cliente asignado"}
               {quote.customer?.email ? ` · ${quote.customer.email}` : ""}
@@ -950,6 +1012,37 @@ export default function QuoteDetail() {
           </s-stack>
         </s-section>
       )}
+
+      {/* Vigencia */}
+      <s-section heading="Vigencia">
+        <s-stack gap="small-200">
+          {vigenciaIso ? (
+            <s-text tone={vencida ? "critical" : undefined}>
+              {vencida
+                ? `Venció el ${formatoFechaVigencia(vigenciaIso)}`
+                : `Vigente hasta el ${formatoFechaVigencia(vigenciaIso)}`}
+            </s-text>
+          ) : (
+            <s-text color="subdued">Esta cotización no tiene vigencia definida.</s-text>
+          )}
+          <s-stack direction="inline" gap="small-200" alignItems="end">
+            <s-number-field
+              label={vigenciaIso ? "Extender por (días, desde hoy)" : "Válida por (días)"}
+              min={1}
+              value={vigenciaDias}
+              onChange={(e: any) => setVigenciaDias(e.currentTarget.value)}
+            />
+            <s-button onClick={guardarVigencia} loading={isSavingVigencia}>
+              {vigenciaIso ? "Actualizar vigencia" : "Establecer vigencia"}
+            </s-button>
+          </s-stack>
+          <s-text color="subdued">
+            El link de pago sigue funcionando después de vencer — es solo un
+            aviso para que decidas si haces seguimiento o cancelas la
+            cotización a mano.
+          </s-text>
+        </s-stack>
+      </s-section>
 
       {/* Datos fiscales (CFDI) */}
       {hasPro ? (

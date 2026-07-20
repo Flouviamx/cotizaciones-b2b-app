@@ -75,6 +75,7 @@ export const VARIABLES_POR_CORREO: Record<EmailKey, VarDef[]> = {
     { token: "{{tienda}}", etiqueta: "Nombre de tu tienda" },
     { token: "{{folio}}", etiqueta: "Folio (ej. #D001)" },
     { token: "{{total}}", etiqueta: "Total de la cotización" },
+    { token: "{{vigencia}}", etiqueta: "Fecha de vigencia (si está definida)" },
   ],
 };
 

@@ -286,8 +286,20 @@ Plus $149/mes — SOLO Shopify Plus
 ## Modelo de datos
 
 Las cotizaciones SON **Draft Orders** de Shopify. Metadata extra se guarda en `customAttributes`
-del draft order (Términos de crédito, Origen, Solicitante, datos CFDI, CFDI UUID). NUNCA reemplazar
-customAttributes directo → usar el helper `mergeCustomAttributes` (lee actuales y mezcla).
+del draft order (Términos de crédito, Origen, Solicitante, datos CFDI, CFDI UUID, **Vigencia**). NUNCA
+reemplazar customAttributes directo → usar el helper `mergeCustomAttributes` (lee actuales y mezcla).
+
+**Vigencia (jul 2026):** customAttribute `"Vigencia"` = fecha ISO (`YYYY-MM-DD`) resuelta al crear/editar
+(no "15 días" — así el vencimiento no depende de cuándo se lea el dato). Se fija en `app.quotes.new.tsx`
+(campo "válida por N días", default 15) y se puede establecer/extender en `app.quotes.$id.tsx` (intent
+`saveVigencia`, mismo patrón que `saveTerms`). **Decisión deliberada — solo informativa, NO bloquea el
+pago:** vencida solo pinta un badge `critical` "Vencida" (lista y detalle) y aparece en el PDF y en el
+correo de envío (`{{vigencia}}` + nota fija vía `extraHtml` en `notifyRequesterQuoteSent`). El
+`invoiceUrl` (checkout nativo de Shopify) sigue funcionando después de vencer — el comerciante decide
+si cancela el draft order a mano. Se eligió así a propósito para no tocar el flujo de checkout: esta
+app ya tuvo un rechazo de App Review por la regla 1.1.2 (ver `create.tsx` y la sección de errores
+abajo), así que cualquier automatización que invalide el link de pago (cron que cancele drafts
+vencidos) queda fuera de esta pasada — sería el siguiente paso si se pide explícitamente.
 
 ## Navegación (s-app-nav)
 

@@ -51,6 +51,16 @@ function estadoTone(status: string): "info" | "caution" | "success" {
   }
 }
 
+// Vencida = ya pasó la fecha guardada en "Vigencia" Y no se ha pagado. Solo
+// informativo — el link de pago sigue funcionando (ver app.quotes.$id.tsx).
+function estaVencida(customAttributes: any[], status: string) {
+  if (status === "COMPLETED") return false;
+  const iso = (customAttributes ?? []).find((a: any) => a.key === "Vigencia")?.value;
+  if (!iso) return false;
+  const d = new Date(`${iso}T23:59:59`);
+  return !Number.isNaN(d.getTime()) && d.getTime() < Date.now();
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
 
@@ -327,6 +337,7 @@ export default function Index() {
                 const facturado = (q.customAttributes ?? []).some(
                   (a: any) => a.key === "CFDI UUID" && a.value,
                 );
+                const vencida = estaVencida(q.customAttributes, q.status);
                 const fecha = q.createdAt
                   ? new Date(q.createdAt).toLocaleDateString("es-MX")
                   : "";
@@ -346,6 +357,9 @@ export default function Index() {
                         <s-badge tone={estadoTone(q.status)}>
                           {estadoLegible(q.status)}
                         </s-badge>
+                        {vencida ? (
+                          <s-badge tone="critical">Vencida</s-badge>
+                        ) : null}
                         {desdeTienda ? (
                           <s-badge tone="info">Desde la tienda</s-badge>
                         ) : null}

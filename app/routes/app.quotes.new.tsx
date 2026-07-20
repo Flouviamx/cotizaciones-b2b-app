@@ -44,6 +44,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const items = JSON.parse(String(formData.get("items") ?? "[]"));
   const customerId = String(formData.get("customerId") ?? "");
   const creditTerms = String(formData.get("creditTerms") ?? "");
+  const vigenciaDias = Number(formData.get("vigenciaDias")) || 15;
 
   const lineItems = items
     .filter((it: any) => it.variantId)
@@ -53,13 +54,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return { error: "Agrega al menos un producto a la cotización." };
   }
 
-  const input: any = { lineItems };
-  if (customerId) input.purchasingEntity = { customerId };
+  // La vigencia se guarda como fecha resuelta (no "15 días"), para que el
+  // vencimiento no dependa de cuándo se lea el dato después.
+  const vigenciaFecha = new Date();
+  vigenciaFecha.setDate(vigenciaFecha.getDate() + vigenciaDias);
+  const customAttributes = [
+    { key: "Vigencia", value: vigenciaFecha.toISOString().slice(0, 10) },
+  ];
   if (creditTerms) {
-    input.customAttributes = [
-      { key: "Términos de crédito", value: creditTerms },
-    ];
+    customAttributes.push({ key: "Términos de crédito", value: creditTerms });
   }
+
+  const input: any = { lineItems, customAttributes };
+  if (customerId) input.purchasingEntity = { customerId };
 
   const resp = await admin.graphql(
     `#graphql
@@ -90,6 +97,7 @@ export default function NewQuote() {
   const [items, setItems] = useState<any[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [creditTerms, setCreditTerms] = useState("Contado");
+  const [vigenciaDias, setVigenciaDias] = useState("15");
 
   const isCreating = fetcher.state !== "idle";
 
@@ -148,7 +156,7 @@ export default function NewQuote() {
       return;
     }
     fetcher.submit(
-      { items: JSON.stringify(items), customerId, creditTerms },
+      { items: JSON.stringify(items), customerId, creditTerms, vigenciaDias },
       { method: "POST" },
     );
   };
@@ -267,6 +275,23 @@ export default function NewQuote() {
           <s-option value="Net 30">Net 30 (30 días)</s-option>
           <s-option value="Net 60">Net 60 (60 días)</s-option>
         </s-select>
+      </s-section>
+
+      {/* Vigencia */}
+      <s-section heading="Vigencia">
+        <s-stack gap="small-200">
+          <s-number-field
+            label="La cotización es válida por (días)"
+            min={1}
+            value={vigenciaDias}
+            onChange={(e: any) => setVigenciaDias(e.currentTarget.value)}
+          />
+          <s-text color="subdued">
+            Al vencer, la cotización se marca como "Vencida" en la lista y el
+            detalle. El link de pago sigue funcionando — tú decides si haces
+            seguimiento o la cancelas.
+          </s-text>
+        </s-stack>
       </s-section>
 
       {/* Cliente */}

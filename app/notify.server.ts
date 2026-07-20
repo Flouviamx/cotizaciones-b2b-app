@@ -148,6 +148,7 @@ type QuoteSentOpts = {
   shopName?: string;
   invoiceUrl: string;
   total?: string;
+  vigencia?: string;
   templates?: Partial<EmailsConfig>;
 };
 
@@ -168,13 +169,22 @@ export async function notifyRequesterQuoteSent(
     tienda: opts.shopName ?? "",
     folio: opts.quoteName ?? "",
     total: opts.total ?? "",
+    vigencia: opts.vigencia ?? "",
   };
+
+  // Aviso operativo (no editable) de la vigencia, igual que el patrón de
+  // "aviso de cuota CFDI": informa aunque el comerciante no use {{vigencia}}
+  // en su plantilla.
+  const extraHtml = opts.vigencia
+    ? `<p style="margin:0 0 16px;font-size:13px;color:#8a8f98;">Esta cotización es válida hasta el <strong style="color:#44474f;">${opts.vigencia}</strong>.</p>`
+    : undefined;
 
   const { subject, html } = construirCorreo({
     tpl,
     vars,
     tienda: opts.shopName ?? "",
     cta: { texto: "Ver y pagar mi cotización", url: opts.invoiceUrl },
+    extraHtml,
   });
 
   return enviar({ to: [opts.requesterEmail], subject, html });

@@ -84,6 +84,16 @@ export function GraficaLinea({
   );
 }
 
+// SimpleBarChart dibuja el nombre de cada barra como una etiqueta superpuesta
+// al inicio de la barra (con fondo opaco), no en un eje aparte — así es el
+// chart de "Top products" del admin de Shopify. Con nombres largos (razón
+// social completa, descripciones de término de crédito) esa etiqueta se come
+// la barra entera y se ve cortada. Se trunca aquí, en el punto compartido,
+// para que cualquier dataset con nombres largos quede protegido.
+function truncarEtiqueta(s: string, max = 26) {
+  return s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s;
+}
+
 // Barras horizontales nativas (para tops y desgloses).
 export function GraficaBarras({
   datos,
@@ -99,7 +109,14 @@ export function GraficaBarras({
   if (datos.length === 0) return null;
   return (
     <Marco
-      alto={Math.max(120, datos.length * 48)}
+      // SimpleBarChart reparte el alto asumiendo `contenedor + 16px`
+      // (HORIZONTAL_SPACE_BETWEEN_SETS, interno a polaris-viz) al calcular
+      // dónde va cada fila, pero el <svg> real solo mide el alto exacto que
+      // le damos aquí — y un <svg> recorta por defecto lo que cae fuera de
+      // su `height`. Con pocas filas ese margen de 16px es un mordisco
+      // visible en el borde inferior de la última barra, así que se lo
+      // sumamos de más para que nunca quede fuera del viewport.
+      alto={Math.max(120, datos.length * 48) + 24}
       render={(viz) => (
         <viz.PolarisVizProvider defaultTheme="Light">
           <viz.SimpleBarChart
@@ -107,7 +124,7 @@ export function GraficaBarras({
               {
                 name: nombre,
                 color,
-                data: datos.map((d) => ({ key: d.label, value: d.valor })),
+                data: datos.map((d) => ({ key: truncarEtiqueta(d.label), value: d.valor })),
               },
             ]}
             showLegend={false}
