@@ -18,6 +18,7 @@ import {
   construirPreviewFormulario,
   type PasoPreview,
 } from "../formulario-preview";
+import { IconRail } from "../components/IconRail";
 
 // La personalización del formulario vive en el MISMO metafield JSON de la app
 // (`$app:flouvia`/`config`), bajo la llave `formulario`. Esta ruta solo edita esa
@@ -166,6 +167,8 @@ export default function FormularioTienda() {
   const [guardado, setGuardado] = useState<FormularioConfig>(inicial);
   const [form, setForm] = useState<FormularioConfig>(inicial);
   const [paso, setPaso] = useState<PasoPreview>(1);
+  const [panel, setPanel] = useState<"contenido" | "apariencia">("contenido");
+  const [dispositivo, setDispositivo] = useState<"desktop" | "mobile">("desktop");
 
   const guardando = fetcher.state !== "idle";
   const dirty = useMemo(
@@ -244,123 +247,176 @@ export default function FormularioTienda() {
           </s-stack>
         </s-section>
       ) : (
-        <s-grid gridTemplateColumns="minmax(0, 1fr) minmax(0, 1fr)" gap="base">
-          {/* Columna izquierda: editor */}
-          <s-section heading="Textos y apariencia">
-            <s-stack gap="base">
-              <s-paragraph color="subdued">
-                Personaliza la ventana de cotización que tus clientes ven en la
-                tienda. Lo que cambies aquí manda sobre el editor de temas, y
-                lo ves al instante en la vista previa.
-              </s-paragraph>
+        <s-grid
+          gridTemplateColumns="56px minmax(0, 1fr) minmax(0, 1fr)"
+          gap="base"
+        >
+          {/* Rail de íconos: cambia qué panel se edita, igual que el
+              "activity bar" del builder de las apps top del App Store. */}
+          <IconRail
+            items={[
+              { id: "contenido", icon: "forms", label: "Contenido" },
+              { id: "apariencia", icon: "paint-brush-round", label: "Apariencia" },
+            ]}
+            value={panel}
+            onChange={setPanel}
+          />
 
-              <s-heading>Textos de la ventana</s-heading>
-              <s-text-field
-                label="Título de la ventana"
-                placeholder="Solicitar cotización"
-                details={`${form.textos.tituloModal.length}/60 caracteres.`}
-                value={form.textos.tituloModal}
-                onChange={(e: any) =>
-                  setTexto({ tituloModal: e.currentTarget.value.slice(0, 60) })
-                }
-              />
-              <s-text-field
-                label="Paso 1 · Productos"
-                details="El texto de introducción del primer paso."
-                value={form.textos.leadPaso1}
-                onChange={(e: any) =>
-                  setTexto({ leadPaso1: e.currentTarget.value })
-                }
-              />
-              <s-text-field
-                label="Paso 2 · Contacto"
-                details="La pregunta que invita a dejar sus datos."
-                value={form.textos.leadPaso2}
-                onChange={(e: any) =>
-                  setTexto({ leadPaso2: e.currentTarget.value })
-                }
-              />
-              <s-text-field
-                label="Paso 3 · Revisar"
-                value={form.textos.leadPaso3}
-                onChange={(e: any) =>
-                  setTexto({ leadPaso3: e.currentTarget.value })
-                }
-              />
-              <s-text-area
-                label="Mensaje de éxito"
-                details="Lo que ve el cliente al enviar su solicitud."
-                rows={3}
-                value={form.textos.mensajeExito}
-                onChange={(e: any) =>
-                  setTexto({ mensajeExito: e.currentTarget.value })
-                }
-              />
-
-              <s-heading>Apariencia</s-heading>
-              <s-text-field
-                label="Texto del botón"
-                placeholder="Solicitar cotización"
-                value={form.apariencia.textoBoton}
-                onChange={(e: any) =>
-                  setApar({ textoBoton: e.currentTarget.value.slice(0, 40) })
-                }
-              />
-              <CampoColor
-                label="Color de acento de la ventana"
-                details="Encabezado, pasos y botones del modal."
-                value={form.apariencia.colorAcento}
-                onChange={(v) => setApar({ colorAcento: v })}
-              />
-              <CampoColor
-                label="Fondo del botón"
-                value={form.apariencia.botonBg}
-                onChange={(v) => setApar({ botonBg: v })}
-              />
-              <CampoColor
-                label="Color del texto del botón"
-                value={form.apariencia.botonTextoColor}
-                onChange={(v) => setApar({ botonTextoColor: v })}
-              />
-
-              <s-stack direction="inline">
-                <s-button
-                  variant="tertiary"
-                  onClick={() => setForm(DEFAULT_FORMULARIO)}
-                >
-                  Restaurar valores por defecto
-                </s-button>
+          {/* Panel de edición: el rail decide cuál de los dos se muestra */}
+          {panel === "contenido" ? (
+            <s-section heading="Contenido">
+              <s-stack gap="base">
+                <s-paragraph color="subdued">
+                  Personaliza los textos de la ventana de cotización. Lo que
+                  cambies aquí manda sobre el editor de temas, y lo ves al
+                  instante en la vista previa.
+                </s-paragraph>
+                <s-text-field
+                  label="Título de la ventana"
+                  placeholder="Solicitar cotización"
+                  details={`${form.textos.tituloModal.length}/60 caracteres.`}
+                  value={form.textos.tituloModal}
+                  onChange={(e: any) =>
+                    setTexto({ tituloModal: e.currentTarget.value.slice(0, 60) })
+                  }
+                />
+                <s-divider />
+                <s-text-field
+                  label="Paso 1 · Productos"
+                  details="El texto de introducción del primer paso."
+                  value={form.textos.leadPaso1}
+                  onChange={(e: any) =>
+                    setTexto({ leadPaso1: e.currentTarget.value })
+                  }
+                />
+                <s-text-field
+                  label="Paso 2 · Contacto"
+                  details="La pregunta que invita a dejar sus datos."
+                  value={form.textos.leadPaso2}
+                  onChange={(e: any) =>
+                    setTexto({ leadPaso2: e.currentTarget.value })
+                  }
+                />
+                <s-text-field
+                  label="Paso 3 · Revisar"
+                  value={form.textos.leadPaso3}
+                  onChange={(e: any) =>
+                    setTexto({ leadPaso3: e.currentTarget.value })
+                  }
+                />
+                <s-divider />
+                <s-text-area
+                  label="Mensaje de éxito"
+                  details="Lo que ve el cliente al enviar su solicitud."
+                  rows={3}
+                  value={form.textos.mensajeExito}
+                  onChange={(e: any) =>
+                    setTexto({ mensajeExito: e.currentTarget.value })
+                  }
+                />
               </s-stack>
-            </s-stack>
-          </s-section>
+            </s-section>
+          ) : (
+            <s-section heading="Apariencia">
+              <s-stack gap="base">
+                <s-paragraph color="subdued">
+                  Colores y texto del botón que dispara el modal.
+                </s-paragraph>
+                <s-text-field
+                  label="Texto del botón"
+                  placeholder="Solicitar cotización"
+                  value={form.apariencia.textoBoton}
+                  onChange={(e: any) =>
+                    setApar({ textoBoton: e.currentTarget.value.slice(0, 40) })
+                  }
+                />
+                <s-divider />
+                <CampoColor
+                  label="Color de acento de la ventana"
+                  details="Encabezado, pasos y botones del modal."
+                  value={form.apariencia.colorAcento}
+                  onChange={(v) => setApar({ colorAcento: v })}
+                />
+                <CampoColor
+                  label="Fondo del botón"
+                  value={form.apariencia.botonBg}
+                  onChange={(v) => setApar({ botonBg: v })}
+                />
+                <CampoColor
+                  label="Color del texto del botón"
+                  value={form.apariencia.botonTextoColor}
+                  onChange={(v) => setApar({ botonTextoColor: v })}
+                />
+                <s-stack direction="inline">
+                  <s-button
+                    variant="tertiary"
+                    onClick={() => setForm(DEFAULT_FORMULARIO)}
+                  >
+                    Restaurar valores por defecto
+                  </s-button>
+                </s-stack>
+              </s-stack>
+            </s-section>
+          )}
 
-          {/* Columna derecha: vista previa sticky (siempre visible mientras
-              editas, como el builder de las apps top del App Store) */}
+          {/* Vista previa sticky con toggle de dispositivo (desktop/mobile),
+              igual que el builder de las apps top del App Store. */}
           <div style={{ position: "sticky", top: 16, alignSelf: "start" }}>
             <s-section heading="Vista previa · como se ve en tu tienda">
               <s-stack gap="base">
-                <s-stack direction="inline" gap="small-200">
-                  {PASOS.map((p) => (
+                <s-stack
+                  direction="inline"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  gap="small-200"
+                >
+                  <s-stack direction="inline" gap="small-200">
+                    {PASOS.map((p) => (
+                      <s-button
+                        key={String(p.id)}
+                        variant={paso === p.id ? "primary" : "secondary"}
+                        onClick={() => setPaso(p.id)}
+                      >
+                        {p.label}
+                      </s-button>
+                    ))}
+                  </s-stack>
+                  <s-stack direction="inline" gap="small-100">
                     <s-button
-                      key={String(p.id)}
-                      variant={paso === p.id ? "primary" : "secondary"}
-                      onClick={() => setPaso(p.id)}
-                    >
-                      {p.label}
-                    </s-button>
-                  ))}
+                      variant={dispositivo === "desktop" ? "primary" : "tertiary"}
+                      icon="desktop"
+                      accessibilityLabel="Vista escritorio"
+                      onClick={() => setDispositivo("desktop")}
+                    />
+                    <s-button
+                      variant={dispositivo === "mobile" ? "primary" : "tertiary"}
+                      icon="mobile"
+                      accessibilityLabel="Vista móvil"
+                      onClick={() => setDispositivo("mobile")}
+                    />
+                  </s-stack>
                 </s-stack>
-                <iframe
-                  title="Vista previa del formulario"
-                  srcDoc={preview}
-                  style={{
-                    width: "100%",
-                    height: 600,
-                    border: "1px solid #e3e3e3",
-                    borderRadius: 8,
-                    background: "#f1f2f5",
-                  }}
-                />
+                <s-box
+                  padding="base"
+                  background="subdued"
+                  borderRadius="base"
+                >
+                  <s-stack alignItems="center">
+                    <iframe
+                      title="Vista previa del formulario"
+                      srcDoc={preview}
+                      style={{
+                        width: dispositivo === "mobile" ? 375 : "100%",
+                        maxWidth: "100%",
+                        height: 600,
+                        border: "1px solid #e3e3e3",
+                        borderRadius: 8,
+                        background: "#fff",
+                        transition: "width 0.2s ease",
+                      }}
+                    />
+                  </s-stack>
+                </s-box>
                 <s-text color="subdued">
                   Usa los botones de arriba para recorrer cada paso del modal,
                   igual que lo verán tus clientes en la tienda.
