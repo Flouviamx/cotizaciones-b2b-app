@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ActionFunctionArgs,
   HeadersFunction,
@@ -18,7 +18,6 @@ import {
   construirPreviewFormulario,
   type PasoPreview,
 } from "../formulario-preview";
-import { IconRail } from "../components/IconRail";
 
 // La personalización del formulario vive en el MISMO metafield JSON de la app
 // (`$app:flouvia`/`config`), bajo la llave `formulario`. Esta ruta solo edita esa
@@ -159,6 +158,16 @@ function CampoColor(props: {
   );
 }
 
+// Dimensiones de viewport real que simula cada modo — el iframe se renderiza
+// a este tamaño nativo y se escala para caber en el panel (mismo truco que
+// usan los builders tipo Webflow/editor de temas). Sin esto, "escritorio" y
+// "móvil" solo cambiaban un poco el ancho del cuadro, nunca cruzaban el
+// breakpoint real de la tienda y se veían prácticamente iguales.
+const DISPOSITIVOS: Record<"desktop" | "mobile", { w: number; h: number; label: string }> = {
+  desktop: { w: 980, h: 620, label: "Escritorio" },
+  mobile: { w: 390, h: 700, label: "Móvil" },
+};
+
 export default function FormularioTienda() {
   const { formulario: inicial, hasPro } = useLoaderData<typeof loader>();
   const shopify = useAppBridge();
@@ -169,6 +178,21 @@ export default function FormularioTienda() {
   const [paso, setPaso] = useState<PasoPreview>(1);
   const [panel, setPanel] = useState<"contenido" | "apariencia">("contenido");
   const [dispositivo, setDispositivo] = useState<"desktop" | "mobile">("desktop");
+
+  // Ancho real disponible para la vista previa (mide el contenedor, no la
+  // ventana) — determina qué tanto hay que escalar el viewport simulado.
+  const previewBoxRef = useRef<HTMLDivElement | null>(null);
+  const [previewBoxWidth, setPreviewBoxWidth] = useState(0);
+  useEffect(() => {
+    const el = previewBoxRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w) setPreviewBoxWidth(w);
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [previewBoxRef]);
 
   const guardando = fetcher.state !== "idle";
   const dirty = useMemo(
@@ -201,6 +225,9 @@ export default function FormularioTienda() {
     () => construirPreviewFormulario(form, { pro: true, paso }),
     [form, paso],
   );
+
+  const dims = DISPOSITIVOS[dispositivo];
+  const escala = previewBoxWidth > 0 ? Math.min(1, previewBoxWidth / dims.w) : 1;
 
   const PASOS: { id: PasoPreview; label: string }[] = [
     { id: 1, label: "1 · Productos" },
@@ -248,21 +275,30 @@ export default function FormularioTienda() {
         </s-section>
       ) : (
         <s-grid
-          gridTemplateColumns="56px minmax(0, 1fr) minmax(0, 1fr)"
+          gridTemplateColumns="minmax(0, 1fr) minmax(0, 1fr)"
           gap="base"
         >
-          {/* Rail de íconos: cambia qué panel se edita, igual que el
-              "activity bar" del builder de las apps top del App Store. */}
-          <IconRail
-            items={[
-              { id: "contenido", icon: "forms", label: "Contenido" },
-              { id: "apariencia", icon: "paint-brush-round", label: "Apariencia" },
-            ]}
-            value={panel}
-            onChange={setPanel}
-          />
+          {/* Panel de edición: dos botones de texto (mismo patrón que Pasos
+              y Dispositivo, abajo) deciden cuál de los dos se muestra —
+              antes era un rail de solo íconos y no se leía como botones. */}
+          <s-stack gap="base">
+            <s-stack direction="inline" gap="small-200">
+              <s-button
+                variant={panel === "contenido" ? "primary" : "secondary"}
+                icon="forms"
+                onClick={() => setPanel("contenido")}
+              >
+                Contenido
+              </s-button>
+              <s-button
+                variant={panel === "apariencia" ? "primary" : "secondary"}
+                icon="paint-brush-round"
+                onClick={() => setPanel("apariencia")}
+              >
+                Apariencia
+              </s-button>
+            </s-stack>
 
-          {/* Panel de edición: el rail decide cuál de los dos se muestra */}
           {panel === "contenido" ? (
             <s-section heading="Contenido">
               <s-stack gap="base">
@@ -358,6 +394,7 @@ export default function FormularioTienda() {
               </s-stack>
             </s-section>
           )}
+          </s-stack>
 
           {/* Vista previa sticky con toggle de dispositivo (desktop/mobile),
               igual que el builder de las apps top del App Store. */}
@@ -383,17 +420,19 @@ export default function FormularioTienda() {
                   </s-stack>
                   <s-stack direction="inline" gap="small-100">
                     <s-button
-                      variant={dispositivo === "desktop" ? "primary" : "tertiary"}
+                      variant={dispositivo === "desktop" ? "primary" : "secondary"}
                       icon="desktop"
-                      accessibilityLabel="Vista escritorio"
                       onClick={() => setDispositivo("desktop")}
-                    />
+                    >
+                      Escritorio
+                    </s-button>
                     <s-button
-                      variant={dispositivo === "mobile" ? "primary" : "tertiary"}
+                      variant={dispositivo === "mobile" ? "primary" : "secondary"}
                       icon="mobile"
-                      accessibilityLabel="Vista móvil"
                       onClick={() => setDispositivo("mobile")}
-                    />
+                    >
+                      Móvil
+                    </s-button>
                   </s-stack>
                 </s-stack>
                 <s-box
@@ -401,25 +440,43 @@ export default function FormularioTienda() {
                   background="subdued"
                   borderRadius="base"
                 >
-                  <s-stack alignItems="center">
-                    <iframe
-                      title="Vista previa del formulario"
-                      srcDoc={preview}
+                  {/* El iframe se renderiza a su tamaño real de viewport
+                      (980px escritorio / 390px móvil) y se escala para caber
+                      — así el HTML de adentro realmente cruza el breakpoint
+                      responsive de la tienda (colapsa columnas, oculta
+                      etiquetas de paso, etc.) en vez de solo verse "un poco
+                      más angosto". */}
+                  <div
+                    ref={previewBoxRef}
+                    style={{ width: "100%", display: "flex", justifyContent: "center" }}
+                  >
+                    <div
                       style={{
-                        width: dispositivo === "mobile" ? 375 : "100%",
-                        maxWidth: "100%",
-                        height: 600,
-                        border: "1px solid #e3e3e3",
+                        width: dims.w * escala,
+                        height: dims.h * escala,
+                        overflow: "hidden",
                         borderRadius: 8,
+                        border: "1px solid #e3e3e3",
                         background: "#fff",
-                        transition: "width 0.2s ease",
+                        transition: "width 0.25s ease, height 0.25s ease",
                       }}
-                    />
-                  </s-stack>
+                    >
+                      <iframe
+                        title="Vista previa del formulario"
+                        srcDoc={preview}
+                        style={{
+                          width: dims.w,
+                          height: dims.h,
+                          border: 0,
+                          transform: `scale(${escala})`,
+                          transformOrigin: "top left",
+                        }}
+                      />
+                    </div>
+                  </div>
                 </s-box>
                 <s-text color="subdued">
-                  Usa los botones de arriba para recorrer cada paso del modal,
-                  igual que lo verán tus clientes en la tienda.
+                  {`Simulando un viewport de ${dims.w}px (${dims.label.toLowerCase()}). Usa los botones de arriba para recorrer cada paso del modal, igual que lo verán tus clientes en la tienda.`}
                 </s-text>
               </s-stack>
             </s-section>

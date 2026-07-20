@@ -134,6 +134,14 @@ export function construirPreviewFormulario(
     align-items:center; justify-content:center; font-size:28px; margin:0 auto 14px; }
   .ok-t { font-size:18px; font-weight:800; margin-bottom:6px; }
   .ok-d { font-size:13.5px; color:#6b7280; line-height:1.5; max-width:320px; margin:0 auto; }
+
+  /* Espejo del breakpoint real de la tienda (flouvia.css: @media max-width:560px)
+     — sin esto, la vista previa "móvil" del admin se veía igual a "escritorio". */
+  @media (max-width: 560px) {
+    .grid { grid-template-columns: 1fr; }
+    .sl { display: none; }
+    .modal { max-height: 96vh; }
+  }
 </style>
 </head>
 <body>
