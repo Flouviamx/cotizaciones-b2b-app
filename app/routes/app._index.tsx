@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { useLoaderData, useNavigate } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
@@ -45,6 +45,32 @@ function estadoLegible(status: string) {
     default:
       return status;
   }
+}
+
+// Fila de acción del sidebar: ícono neutral + link azul, sin chrome de botón
+// — el mismo patrón compacto que usan las apps top del App Store en su
+// Centro de soporte ("💬 Iniciar chat", "📖 Guía", "✉️ Correo").
+function FilaAccion({
+  icon,
+  children,
+  onClick,
+  href,
+  target,
+}: {
+  icon: string;
+  children: ReactNode;
+  onClick?: () => void;
+  href?: string;
+  target?: string;
+}) {
+  return (
+    <s-stack direction="inline" gap="small-300" alignItems="center">
+      <s-icon type={icon as any} tone="neutral" size="small" />
+      <s-link onClick={onClick} href={href} target={target}>
+        {children}
+      </s-link>
+    </s-stack>
+  );
 }
 
 // Tono del badge de Polaris según el estado de la cotización.
@@ -463,8 +489,16 @@ export default function Inicio() {
           </s-stack>
         </s-section>
 
-        {/* Estado de la cuenta */}
+        {/* Estado de la cuenta — acción en el header de la tarjeta, no al
+            final (mismo patrón que "Actualizar plan" en apps top del App Store) */}
         <s-section heading="Estado de tu cuenta">
+          <s-button
+            slot="primary-action"
+            variant="tertiary"
+            onClick={() => navigate("/app/plans")}
+          >
+            {limite.paid ? "Administrar" : "Actualizar"}
+          </s-button>
           <s-stack gap="base">
             <s-stack direction="inline" gap="small-200" alignItems="center">
               <s-text color="subdued">Plan actual:</s-text>
@@ -502,35 +536,36 @@ export default function Inicio() {
                 ) : null}
               </s-stack>
             )}
-
-            <s-button onClick={() => navigate("/app/plans")}>
-              {limite.paid ? "Administrar plan" : "Actualizar plan"}
-            </s-button>
           </s-stack>
         </s-section>
 
-        {/* Centro de soporte */}
+        {/* Centro de soporte — filas compactas de ícono + link, sin chrome
+            de botón (mismo patrón denso que "💬 Iniciar chat en vivo /
+            📖 Guía / ✉️ Correo" de las apps top del App Store) */}
         <s-section heading="Centro de soporte">
-          <s-stack gap="small-200">
-            <s-paragraph color="subdued">
-              ¿Dudas o problemas? Te respondemos en menos de 24 horas hábiles,
-              en español.
-            </s-paragraph>
-            <s-stack direction="inline">
-              <s-button onClick={() => navigate("/app/contacto")}>
-                Contactar soporte
-              </s-button>
-            </s-stack>
-            <s-divider />
-            <s-link onClick={() => navigate("/app/configuracion")}>
+          <s-stack gap="small-400">
+            <FilaAccion icon="chat" onClick={() => navigate("/app/contacto")}>
+              Contactar soporte
+            </FilaAccion>
+            <FilaAccion
+              icon="settings"
+              onClick={() => navigate("/app/configuracion")}
+            >
               Configuración de la app
-            </s-link>
-            <s-link onClick={() => navigate("/app/formulario")}>
+            </FilaAccion>
+            <FilaAccion
+              icon="edit"
+              onClick={() => navigate("/app/formulario")}
+            >
               Personalizar el formulario
-            </s-link>
-            <s-link href={themeEditorUrl} target="_blank">
+            </FilaAccion>
+            <FilaAccion icon="theme-edit" href={themeEditorUrl} target="_blank">
               Editor de temas
-            </s-link>
+            </FilaAccion>
+            <s-divider />
+            <s-text color="subdued">
+              Te respondemos en menos de 24 horas hábiles, en español.
+            </s-text>
           </s-stack>
         </s-section>
       </s-stack>
