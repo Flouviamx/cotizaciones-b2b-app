@@ -2,36 +2,54 @@
 // misma que usa el admin nativo (Analytics, Pedidos), así que el resultado es
 // visualmente idéntico al admin, no "inspirado en".
 //
-// Los charts miden el DOM (ResizeObserver) y no pueden renderizar en SSR:
-// el <Marco> reserva el alto en el servidor y monta la gráfica solo en el
-// cliente (evita "document is not defined" y saltos de layout).
+// ⚠️ SSR: polaris-viz ejecuta código de navegador (window/document) al
+// importarse. Por eso NO se importa estático aquí — se carga con import()
+// dinámico DENTRO de un useEffect (solo en cliente). Así el bundle del
+// servidor nunca evalúa ese módulo y la función serverless no crashea.
+// El <Marco> reserva el alto en SSR y monta la gráfica al cargar la librería.
 //
 // ARCHIVO CLIENTE-SEGURO: no importar nada de servidor aquí.
 
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  LineChart,
-  SimpleBarChart,
-  FunnelChartNext,
-  PolarisVizProvider,
-} from "@shopify/polaris-viz";
-import "@shopify/polaris-viz/build/esm/styles.css";
 
-function useMontado() {
-  const [montado, setMontado] = useState(false);
-  useEffect(() => setMontado(true), []);
-  return montado;
+// Carga perezosa (una sola vez) de polaris-viz + su CSS. Solo corre en cliente.
+let vizPromise: Promise<any> | null = null;
+function cargarViz(): Promise<any> {
+  if (!vizPromise) {
+    vizPromise = Promise.all([
+      import("@shopify/polaris-viz"),
+      // Import de CSS como side-effect (Vite lo inyecta en cliente).
+      import("@shopify/polaris-viz/build/esm/styles.css"),
+    ]).then(([mod]) => mod);
+  }
+  return vizPromise;
 }
 
-function Marco({ alto, children }: { alto: number; children: ReactNode }) {
-  const montado = useMontado();
-  return (
-    <div style={{ height: alto }}>
-      {montado ? (
-        <PolarisVizProvider defaultTheme="Light">{children}</PolarisVizProvider>
-      ) : null}
-    </div>
-  );
+function useViz() {
+  const [viz, setViz] = useState<any>(null);
+  useEffect(() => {
+    let vivo = true;
+    cargarViz().then((mod) => {
+      if (vivo) setViz(mod);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+  return viz;
+}
+
+// Contenedor que reserva el alto en SSR y monta el chart solo cuando la
+// librería cargó en el cliente.
+function Marco({
+  alto,
+  render,
+}: {
+  alto: number;
+  render: (viz: any) => ReactNode;
+}) {
+  const viz = useViz();
+  return <div style={{ height: alto }}>{viz ? render(viz) : null}</div>;
 }
 
 export function GraficaLinea({
@@ -51,13 +69,18 @@ export function GraficaLinea({
     data: categorias.map((c, i) => ({ key: c, value: s.valores[i] ?? 0 })),
   }));
   return (
-    <Marco alto={alto}>
-      <LineChart
-        data={data}
-        showLegend={series.length > 1}
-        yAxisOptions={{ labelFormatter: (v) => formatoY(Number(v ?? 0)) }}
-      />
-    </Marco>
+    <Marco
+      alto={alto}
+      render={(viz) => (
+        <viz.PolarisVizProvider defaultTheme="Light">
+          <viz.LineChart
+            data={data}
+            showLegend={series.length > 1}
+            yAxisOptions={{ labelFormatter: (v: any) => formatoY(Number(v ?? 0)) }}
+          />
+        </viz.PolarisVizProvider>
+      )}
+    />
   );
 }
 
@@ -75,19 +98,24 @@ export function GraficaBarras({
 }) {
   if (datos.length === 0) return null;
   return (
-    <Marco alto={Math.max(120, datos.length * 48)}>
-      <SimpleBarChart
-        data={[
-          {
-            name: nombre,
-            color,
-            data: datos.map((d) => ({ key: d.label, value: d.valor })),
-          },
-        ]}
-        showLegend={false}
-        xAxisOptions={{ labelFormatter: (v) => formato(Number(v ?? 0)) }}
-      />
-    </Marco>
+    <Marco
+      alto={Math.max(120, datos.length * 48)}
+      render={(viz) => (
+        <viz.PolarisVizProvider defaultTheme="Light">
+          <viz.SimpleBarChart
+            data={[
+              {
+                name: nombre,
+                color,
+                data: datos.map((d) => ({ key: d.label, value: d.valor })),
+              },
+            ]}
+            showLegend={false}
+            xAxisOptions={{ labelFormatter: (v: any) => formato(Number(v ?? 0)) }}
+          />
+        </viz.PolarisVizProvider>
+      )}
+    />
   );
 }
 
@@ -100,18 +128,23 @@ export function GraficaEmbudo({
   alto?: number;
 }) {
   return (
-    <Marco alto={alto}>
-      <FunnelChartNext
-        data={[
-          {
-            name: "Embudo",
-            data: pasos.map((p) => ({ key: p.label, value: p.valor })),
-          },
-        ]}
-        tooltipLabels={{ reached: "Llegaron", dropped: "No avanzaron" }}
-        showPercentages
-      />
-    </Marco>
+    <Marco
+      alto={alto}
+      render={(viz) => (
+        <viz.PolarisVizProvider defaultTheme="Light">
+          <viz.FunnelChartNext
+            data={[
+              {
+                name: "Embudo",
+                data: pasos.map((p) => ({ key: p.label, value: p.valor })),
+              },
+            ]}
+            tooltipLabels={{ reached: "Llegaron", dropped: "No avanzaron" }}
+            showPercentages
+          />
+        </viz.PolarisVizProvider>
+      )}
+    />
   );
 }
 
