@@ -244,7 +244,8 @@ export default function FormularioTienda() {
           </s-stack>
         </s-section>
       ) : (
-        <>
+        <s-grid gridTemplateColumns="minmax(0, 1fr) minmax(0, 1fr)" gap="base">
+          {/* Columna izquierda: editor */}
           <s-section heading="Textos y apariencia">
             <s-stack gap="base">
               <s-paragraph color="subdued">
@@ -333,37 +334,41 @@ export default function FormularioTienda() {
             </s-stack>
           </s-section>
 
-          <s-section heading="Vista previa · como se ve en tu tienda">
-            <s-stack gap="base">
-              <s-stack direction="inline" gap="small-200">
-                {PASOS.map((p) => (
-                  <s-button
-                    key={String(p.id)}
-                    variant={paso === p.id ? "primary" : "secondary"}
-                    onClick={() => setPaso(p.id)}
-                  >
-                    {p.label}
-                  </s-button>
-                ))}
+          {/* Columna derecha: vista previa sticky (siempre visible mientras
+              editas, como el builder de las apps top del App Store) */}
+          <div style={{ position: "sticky", top: 16, alignSelf: "start" }}>
+            <s-section heading="Vista previa · como se ve en tu tienda">
+              <s-stack gap="base">
+                <s-stack direction="inline" gap="small-200">
+                  {PASOS.map((p) => (
+                    <s-button
+                      key={String(p.id)}
+                      variant={paso === p.id ? "primary" : "secondary"}
+                      onClick={() => setPaso(p.id)}
+                    >
+                      {p.label}
+                    </s-button>
+                  ))}
+                </s-stack>
+                <iframe
+                  title="Vista previa del formulario"
+                  srcDoc={preview}
+                  style={{
+                    width: "100%",
+                    height: 600,
+                    border: "1px solid #e3e3e3",
+                    borderRadius: 8,
+                    background: "#f1f2f5",
+                  }}
+                />
+                <s-text color="subdued">
+                  Usa los botones de arriba para recorrer cada paso del modal,
+                  igual que lo verán tus clientes en la tienda.
+                </s-text>
               </s-stack>
-              <iframe
-                title="Vista previa del formulario"
-                srcDoc={preview}
-                style={{
-                  width: "100%",
-                  height: 660,
-                  border: "1px solid #e3e3e3",
-                  borderRadius: 8,
-                  background: "#f1f2f5",
-                }}
-              />
-              <s-text color="subdued">
-                Usa los botones de arriba para recorrer cada paso del modal,
-                igual que lo verán tus clientes en la tienda.
-              </s-text>
-            </s-stack>
-          </s-section>
-        </>
+            </s-section>
+          </div>
+        </s-grid>
       )}
 
       {/* Save bar contextual de App Bridge (aparece cuando hay cambios). */}

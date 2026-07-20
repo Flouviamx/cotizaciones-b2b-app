@@ -8,7 +8,12 @@ import { BILLING_TEST } from "../billing.server";
 import prisma from "../db.server";
 import { Progreso } from "../components/Progreso";
 import { Kpi } from "../components/Kpi";
-import { LineChart } from "../components/LineChart";
+import {
+  GraficaLinea,
+  GraficaBarras,
+  GraficaEmbudo,
+  TarjetaGrafica,
+} from "../components/Charts";
 
 // Paginamos los Draft Orders (hasta MAX_PAGES × 100) para que los KPIs sean
 // fieles aunque el comerciante tenga mucho volumen, y dejamos que el cliente
@@ -205,8 +210,9 @@ function nucleo(set: Quote[]) {
     .filter((q) => q.status === "OPEN" || q.status === "INVOICE_SENT")
     .reduce((s, q) => s + q.monto, 0);
   const conversion = total > 0 ? (pagadas.length / total) * 100 : 0;
-  const ticket = total > 0 ? set.reduce((s, q) => s + q.monto, 0) / total : 0;
-  return { total, ingresos, pipeline, conversion, ticket };
+  const montoCotizado = set.reduce((s, q) => s + q.monto, 0);
+  const ticket = total > 0 ? montoCotizado / total : 0;
+  return { total, ingresos, pipeline, conversion, ticket, montoCotizado };
 }
 
 export default function Analitica() {
@@ -341,14 +347,23 @@ export default function Analitica() {
       .map(([nombre, v]) => ({ nombre, ...v }))
       .sort((a, b) => b.monto - a.monto);
 
-    // Tendencia adaptativa al rango: cotizado (azul) + cobrado (verde).
-    const buckets: { label: string; ini: number; fin: number; cotizado: number; cobrado: number }[] = [];
+    // Tendencia adaptativa al rango: monto cotizado/cobrado + conteos por
+    // periodo (alimentan las 4 tarjetas de gráfica).
+    const buckets: {
+      label: string;
+      ini: number;
+      fin: number;
+      cotizado: number;
+      cobrado: number;
+      n: number;
+      nPagadas: number;
+    }[] = [];
     if (diasRango == null) {
       const d = new Date();
       for (let i = 5; i >= 0; i--) {
         const s = new Date(d.getFullYear(), d.getMonth() - i, 1);
         const e = new Date(d.getFullYear(), d.getMonth() - i + 1, 1);
-        buckets.push({ label: MESES[s.getMonth()], ini: s.getTime(), fin: e.getTime(), cotizado: 0, cobrado: 0 });
+        buckets.push({ label: MESES[s.getMonth()], ini: s.getTime(), fin: e.getTime(), cotizado: 0, cobrado: 0, n: 0, nPagadas: 0 });
       }
     } else {
       const cfg =
@@ -359,7 +374,16 @@ export default function Analitica() {
       for (let i = cfg.n - 1; i >= 0; i--) {
         const fin = finBase - i * cfg.paso * DIA_MS;
         const ini = fin - cfg.paso * DIA_MS;
-        buckets.push({ label: String(new Date(ini).getDate()), ini, fin, cotizado: 0, cobrado: 0 });
+        const f = new Date(ini);
+        buckets.push({
+          label: `${f.getDate()} ${MESES[f.getMonth()]}`,
+          ini,
+          fin,
+          cotizado: 0,
+          cobrado: 0,
+          n: 0,
+          nPagadas: 0,
+        });
       }
     }
     for (const q of quotes) {
@@ -367,12 +391,15 @@ export default function Analitica() {
       for (const b of buckets) {
         if (t >= b.ini && t < b.fin) {
           b.cotizado += q.monto;
-          if (q.status === "COMPLETED") b.cobrado += q.monto;
+          b.n += 1;
+          if (q.status === "COMPLETED") {
+            b.cobrado += q.monto;
+            b.nPagadas += 1;
+          }
           break;
         }
       }
     }
-    const maxBucket = Math.max(1, ...buckets.map((b) => b.cotizado));
 
     return {
       ...base,
@@ -386,7 +413,6 @@ export default function Analitica() {
       empresas,
       terminos,
       buckets,
-      maxBucket,
     };
   }, [filtrados, previo, quotes, diasRango]);
 
@@ -490,8 +516,6 @@ export default function Analitica() {
   const totalAnim = useCountUp(m.total);
   const pipelineAnim = useCountUp(m.pipeline);
   const ticketAnim = useCountUp(m.ticket);
-
-  const maxFunnel = Math.max(1, m.abiertas, m.enviadas, m.pagadas);
 
   // Descarga las cotizaciones del periodo como CSV (para contabilidad / Excel).
   const exportarCSV = () => {
@@ -712,66 +736,109 @@ export default function Analitica() {
         </s-section>
       ) : (
         <>
-          {/* Tendencia de ingresos (adaptada al rango) */}
-          <s-section heading="Monto cotizado vs cobrado">
-            <LineChart
-              categorias={m.buckets.map((b) => b.label)}
-              series={[
-                {
-                  label: "Cotizado",
-                  color: "#2c6ecb",
-                  valores: m.buckets.map((b) => b.cotizado),
-                },
-                {
-                  label: "Cobrado",
-                  color: "#29845a",
-                  valores: m.buckets.map((b) => b.cobrado),
-                },
-              ]}
-              formatoY={(v) => fmtCompact.format(v)}
-            />
+          {/* Tarjetas de gráfica (mismo patrón que Analytics del admin) */}
+          <s-section accessibilityLabel="Tendencias del periodo">
+            <s-grid
+              gridTemplateColumns="repeat(auto-fit, minmax(320px, 1fr))"
+              gap="base"
+            >
+              <TarjetaGrafica
+                titulo="Valor cotizado a lo largo del tiempo"
+                valor={fmtMoney.format(m.montoCotizado)}
+                extra={<DeltaChip delta={m.deltas?.ticket} />}
+              >
+                <GraficaLinea
+                  categorias={m.buckets.map((b) => b.label)}
+                  series={[
+                    {
+                      label: "Cotizado",
+                      color: "#2c6ecb",
+                      valores: m.buckets.map((b) => b.cotizado),
+                    },
+                  ]}
+                  formatoY={(v) => fmtCompact.format(v)}
+                />
+              </TarjetaGrafica>
+
+              <TarjetaGrafica
+                titulo="Ingresos cobrados a lo largo del tiempo"
+                valor={fmtMoney.format(m.ingresos)}
+                extra={<DeltaChip delta={m.deltas?.ingresos} />}
+              >
+                <GraficaLinea
+                  categorias={m.buckets.map((b) => b.label)}
+                  series={[
+                    {
+                      label: "Cobrado",
+                      color: "#29845a",
+                      valores: m.buckets.map((b) => b.cobrado),
+                    },
+                  ]}
+                  formatoY={(v) => fmtCompact.format(v)}
+                />
+              </TarjetaGrafica>
+
+              <TarjetaGrafica
+                titulo="Cotizaciones a lo largo del tiempo"
+                valor={`${m.total}`}
+                extra={<DeltaChip delta={m.deltas?.total} />}
+              >
+                <GraficaLinea
+                  categorias={m.buckets.map((b) => b.label)}
+                  series={[
+                    {
+                      label: "Cotizaciones",
+                      color: "#2c6ecb",
+                      valores: m.buckets.map((b) => b.n),
+                    },
+                  ]}
+                  formatoY={(v) => `${Math.round(v)}`}
+                />
+              </TarjetaGrafica>
+
+              <TarjetaGrafica
+                titulo="Tasa de conversión a lo largo del tiempo"
+                valor={`${m.conversion.toFixed(1)}%`}
+                extra={<DeltaChip delta={m.deltas?.conversion} />}
+              >
+                <GraficaLinea
+                  categorias={m.buckets.map((b) => b.label)}
+                  series={[
+                    {
+                      label: "Conversión",
+                      color: "#8051ff",
+                      valores: m.buckets.map((b) =>
+                        b.n > 0 ? (b.nPagadas / b.n) * 100 : 0,
+                      ),
+                    },
+                  ]}
+                  formatoY={(v) => `${Math.round(v)}%`}
+                />
+              </TarjetaGrafica>
+            </s-grid>
           </s-section>
 
-          {/* Embudo + top productos */}
+          {/* Embudo (el mismo componente del embudo de conversión del admin) */}
           <s-section heading="Embudo de cotizaciones">
-            <s-stack gap="base">
-              <s-stack gap="small-300">
-                <s-stack direction="inline" justifyContent="space-between">
-                  <s-text>Abiertas</s-text>
-                  <s-text color="subdued">{`${m.abiertas}`}</s-text>
-                </s-stack>
-                <Barra pct={(m.abiertas / maxFunnel) * 100} />
-              </s-stack>
-              <s-stack gap="small-300">
-                <s-stack direction="inline" justifyContent="space-between">
-                  <s-text>Enviadas (link de pago)</s-text>
-                  <s-text color="subdued">{`${m.enviadas}`}</s-text>
-                </s-stack>
-                <Barra pct={(m.enviadas / maxFunnel) * 100} color="#b28400" />
-              </s-stack>
-              <s-stack gap="small-300">
-                <s-stack direction="inline" justifyContent="space-between">
-                  <s-text>Pagadas</s-text>
-                  <s-text color="subdued">{`${m.pagadas}`}</s-text>
-                </s-stack>
-                <Barra pct={(m.pagadas / maxFunnel) * 100} color="#29845a" />
-              </s-stack>
-            </s-stack>
+            <GraficaEmbudo
+              pasos={[
+                { label: "Creadas", valor: m.abiertas + m.enviadas + m.pagadas },
+                { label: "Enviadas (link de pago)", valor: m.enviadas + m.pagadas },
+                { label: "Pagadas", valor: m.pagadas },
+              ]}
+            />
           </s-section>
 
           <s-section heading="Top productos cotizados">
             {m.productos.length > 0 ? (
-              <s-stack gap="base">
-                {m.productos.map((p) => (
-                  <s-stack gap="small-300" key={p.titulo}>
-                    <s-stack direction="inline" justifyContent="space-between" gap="small-200">
-                      <s-text>{p.titulo}</s-text>
-                      <s-text color="subdued">{`${p.cantidad} uds · ${p.n}`}</s-text>
-                    </s-stack>
-                    <Barra pct={(p.cantidad / m.productos[0].cantidad) * 100} />
-                  </s-stack>
-                ))}
-              </s-stack>
+              <GraficaBarras
+                nombre="Unidades"
+                datos={m.productos.map((p) => ({
+                  label: p.titulo,
+                  valor: p.cantidad,
+                }))}
+                formato={(v) => `${Math.round(v)} uds`}
+              />
             ) : (
               <s-paragraph color="subdued">
                 Sin productos en este rango.
@@ -812,19 +879,14 @@ export default function Analitica() {
           {/* Desglose B2B: empresas + términos de crédito */}
           <s-section heading="Desglose por empresa B2B">
             {m.empresas.length > 0 ? (
-              <s-stack gap="base">
-                {m.empresas.map((e) => (
-                  <s-stack gap="small-300" key={e.nombre}>
-                    <s-stack direction="inline" justifyContent="space-between" gap="small-200">
-                      <s-text>{e.nombre}</s-text>
-                      <s-text color="subdued">
-                        {`${fmtMoney.format(e.monto)} · ${e.n}`}
-                      </s-text>
-                    </s-stack>
-                    <Barra pct={(e.monto / m.empresas[0].monto) * 100} />
-                  </s-stack>
-                ))}
-              </s-stack>
+              <GraficaBarras
+                nombre="Monto cotizado"
+                datos={m.empresas.map((e) => ({
+                  label: e.nombre,
+                  valor: e.monto,
+                }))}
+                formato={(v) => fmtCompact.format(v)}
+              />
             ) : (
               <s-paragraph color="subdued">
                 Aún no asignas empresas a tus cotizaciones.
@@ -833,19 +895,15 @@ export default function Analitica() {
           </s-section>
 
           <s-section heading="Desglose por término de crédito">
-            <s-stack gap="base">
-              {m.terminos.map((t) => (
-                <s-stack gap="small-300" key={t.nombre}>
-                  <s-stack direction="inline" justifyContent="space-between" gap="small-200">
-                    <s-text>{t.nombre}</s-text>
-                    <s-text color="subdued">
-                      {`${fmtMoney.format(t.monto)} · ${t.n}`}
-                    </s-text>
-                  </s-stack>
-                  <Barra pct={(t.monto / m.terminos[0].monto) * 100} color="#8051ff" />
-                </s-stack>
-              ))}
-            </s-stack>
+            <GraficaBarras
+              nombre="Monto cotizado"
+              color="#8051ff"
+              datos={m.terminos.map((t) => ({
+                label: t.nombre,
+                valor: t.monto,
+              }))}
+              formato={(v) => fmtCompact.format(v)}
+            />
           </s-section>
 
           {/* Uso de CFDI del mes */}

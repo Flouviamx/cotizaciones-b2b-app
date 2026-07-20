@@ -428,6 +428,41 @@ export default function Inicio() {
 
       {/* ---------------- Barra lateral ---------------- */}
       <s-stack slot="aside" gap="base">
+        {/* Estado de incrustación en la tienda */}
+        <s-section heading="Estado en tu tienda">
+          <s-stack gap="small-200">
+            <s-stack direction="inline" gap="small-200" alignItems="center">
+              <span
+                style={{
+                  width: 9,
+                  height: 9,
+                  borderRadius: 999,
+                  background: botonListo ? "#29845a" : "#b28400",
+                  display: "inline-block",
+                  boxShadow: botonListo
+                    ? "0 0 0 3px rgba(41,132,90,0.15)"
+                    : "0 0 0 3px rgba(178,132,0,0.15)",
+                }}
+              />
+              <s-text>
+                {botonListo ? "App incrustada y activa" : "App no incrustada"}
+              </s-text>
+            </s-stack>
+            <s-paragraph color="subdued">
+              {botonListo
+                ? "Tus clientes ya pueden solicitar cotizaciones desde tu tienda."
+                : "Activa la incrustación en el editor de temas para recibir solicitudes."}
+            </s-paragraph>
+            {!botonListo ? (
+              <s-stack direction="inline">
+                <s-button href={themeEditorUrl} target="_blank" icon="external">
+                  Activar en el tema
+                </s-button>
+              </s-stack>
+            ) : null}
+          </s-stack>
+        </s-section>
+
         {/* Estado de la cuenta */}
         <s-section heading="Estado de tu cuenta">
           <s-stack gap="base">

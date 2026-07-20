@@ -37,7 +37,7 @@ import {
   setLivemode,
   type OrgEstado,
 } from "../facturapi.server";
-import { Tabs } from "../components/Tabs";
+import { NavVertical } from "../components/NavVertical";
 
 // La configuración se guarda como UN metafield JSON propio de la app
 // (namespace reservado "$app:flouvia"). Los metafields de la app no requieren
@@ -561,20 +561,23 @@ export default function Configuracion() {
         Inicio
       </s-button>
 
-      {/* Pestañas: Correos, Crédito y PDF son de pago (Plan Básico). Se ven
-          siempre, pero con candado en el Plan Gratis. */}
-      <s-box paddingBlockEnd="base">
-        <Tabs
-          tabs={TABS.map((t) => ({
-            id: t.id,
-            label: t.label,
-            badge: t.dePago && !hasPaid ? "🔒" : undefined,
-          }))}
-          value={tab}
-          onChange={setTab}
-        />
-      </s-box>
+      {/* Hub de 2 columnas estilo admin: nav vertical (sticky) a la izquierda
+          + panel de detalle a la derecha. Correos, Crédito y PDF son de pago
+          (Plan Básico): se ven siempre, con candado en el Plan Gratis. */}
+      <s-grid gridTemplateColumns="220px minmax(0, 1fr)" gap="base">
+        <div style={{ position: "sticky", top: 16, alignSelf: "start" }}>
+          <NavVertical
+            items={TABS.map((t) => ({
+              id: t.id,
+              label: t.label,
+              badge: t.dePago && !hasPaid ? "🔒" : undefined,
+            }))}
+            value={tab}
+            onChange={setTab}
+          />
+        </div>
 
+        <s-stack gap="base">
       {/* ---------- FISCAL ---------- */}
       {tab === "fiscal" ? (
         <>
@@ -1209,6 +1212,8 @@ export default function Configuracion() {
           </s-stack>
         </s-section>
       ) : null}
+        </s-stack>
+      </s-grid>
 
       {/* Save bar contextual de App Bridge: se muestra/oculta según `dirty`
           (useEffect de arriba). Los botones toman las etiquetas nativas del
