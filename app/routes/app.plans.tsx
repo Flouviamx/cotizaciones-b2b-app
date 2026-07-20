@@ -388,11 +388,17 @@ function celdaComparativa(valor: boolean | string) {
 // Fila de una feature: palomita + texto. Compartida por la card compacta y la
 // hero.
 function Feature({ f }: { f: string }) {
+  // s-stack con direction="inline" envuelve TODO el contenido a la siguiente
+  // línea cuando no cabe (la palomita queda sola arriba, el texto abajo). Un
+  // grid de columnas fijas evita eso: la palomita se queda fija a la
+  // izquierda y solo el texto hace su propio salto de línea.
   return (
-    <s-stack direction="inline" gap="small-300" alignItems="start">
-      <s-icon type="check" tone="success" />
+    <s-grid gridTemplateColumns="18px 1fr" gap="small-300">
+      <s-box paddingBlockStart="small-500">
+        <s-icon type="check" tone="success" />
+      </s-box>
       <s-text>{f}</s-text>
-    </s-stack>
+    </s-grid>
   );
 }
 
